@@ -6,6 +6,8 @@
 ![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla-yellow?style=flat-square)
 ![No Server](https://img.shields.io/badge/Server-None%20Required-green?style=flat-square)
 
+### 🌐 Live Website → [https://sohamrp172-sys.github.io/vighanesh](https://sohamrp172-sys.github.io/vighanesh)
+
 > **A low-cost, circuit-free smart wound patch demonstration with smartphone-based monitoring.**
 
 HealSense is a single-page web application that demonstrates how a smart wound-healing patch can be monitored using only a smartphone. Upload a photo of the physical patch and the system automatically detects the pH indicator colour — **Yellow** (Healing) or **Purple** (Abnormal) — to assess wound condition instantly, without any electronic circuit or dedicated hardware.
