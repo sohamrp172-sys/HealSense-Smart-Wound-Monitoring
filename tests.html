@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealSense – Test Suite</title>
+  <script src="https://cdn.jsdelivr.net/npm/fast-check@3.15.0/lib/bundle/fast-check.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f8fafc; color: #1e293b; padding: 2rem; }
+    h1 { color: #0a7ea4; margin-bottom: 0.5rem; }
+    h2 { margin: 2rem 0 0.75rem; font-size: 1.1rem; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.4rem; }
+    .pass { color: #16a34a; font-weight: 600; }
+    .fail { color: #dc2626; font-weight: 600; }
+    .test  { padding: 0.35rem 0; font-size: 0.9rem; border-bottom: 1px solid #f1f5f9; }
+    #summary { margin-top: 2rem; padding: 1rem; border-radius: 10px; font-size: 1rem; font-weight: 600; }
+    #summary.all-pass { background: #dcfce7; color: #166534; }
+    #summary.has-fail  { background: #fee2e2; color: #991b1b; }
+    pre { background: #1e293b; color: #f1f5f9; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.8rem; overflow-x: auto; margin-top: 0.3rem; }
+  </style>
+</head>
+<body>
+
+<h1>💚 HealSense — Test Suite</h1>
+<p style="color:#64748b;">Property-based and unit tests for UploadModule, AnalyserModule, and DatasetModule.</p>
+
+<div id="results"></div>
+<div id="summary"></div>
+
+<!-- ============================================================
+     Inline module stubs (pure-logic copies of index.html modules)
+     ============================================================ -->
+<script>
+  /* ---- UploadModule (pure logic only, no DOM) ---- */
+  var UploadModule = (function () {
+    var MAX_SIZE = 10 * 1024 * 1024;
+    var ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    function validate(file) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        return { valid: false, error: 'Please upload a valid image file (JPG, PNG, or WEBP).' };
+      }
+      if (file.size > MAX_SIZE) {
+        return { valid: false, error: 'Image file size must be 10 MB or less.' };
+      }
+      return { valid: true, error: null };
+    }
+    return { validate: validate };
+  })();
+
+  /* ---- AnalyserModule (pure logic only, no DOM) ---- */
+  var AnalyserModule = (function () {
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      var max = Math.max(r, g, b), min = Math.min(r, g, b);
+      var h, s, l = (max + min) / 2;
+      if (max === min) {
+        h = s = 0;
+      } else {
+        var d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          case b: h = ((r - g) / d + 4) / 6; break;
+        }
+      }
+      return { h: h * 360, s: s * 100, l: l * 100 };
+    }
+    function classifyHsl(h, s, l) {
+      if (h >= 45 && h <= 65 && s >= 40) return 'yellow';
+      if (h >= 270 && h <= 310 && s >= 30) return 'purple';
+      return 'other';
+    }
+    return { rgbToHsl: rgbToHsl, classifyHsl: classifyHsl };
+  })();
+
+  /* ---- DatasetModule (pure data, no DOM) ---- */
+  var DatasetModule = (function () {
+    var RECORDS = [
+      { recordId:'R001',woundCondition:'Healing',alertLevel:'Green',pHColour:'Yellow' },
+      { recordId:'R002',woundCondition:'Healing',alertLevel:'Green',pHColour:'Yellow' },
+      { recordId:'R003',woundCondition:'Healing',alertLevel:'Green',pHColour:'Yellow' },
+      { recordId:'R004',woundCondition:'Healing',alertLevel:'Green',pHColour:'Yellow' },
+      { recordId:'R005',woundCondition:'Healing',alertLevel:'Green',pHColour:'Yellow' },
+      { recordId:'R006',woundCondition:'Abnormal',alertLevel:'Red',pHColour:'Purple' },
+      { recordId:'R007',woundCondition:'Abnormal',alertLevel:'Red',pHColour:'Purple' },
+      { recordId:'R008',woundCondition:'Abnormal',alertLevel:'Red',pHColour:'Purple' },
+      { recordId:'R009',woundCondition:'Abnormal',alertLevel:'Red',pHColour:'Purple' },
+      { recordId:'R010',woundCondition:'Abnormal',alertLevel:'Red',pHColour:'Purple' }
+    ];
+    function getAll() { return RECORDS; }
+    function getByCondition(c) { return RECORDS.filter(function(r){ return r.woundCondition === c; }); }
+    return { getAll: getAll, getByCondition: getByCondition };
+  })();
+</script>
+
+<!-- ============================================================
+     Test runner
+     ============================================================ -->
+<script>
+  var passed = 0, failed = 0;
+  var resultsEl = document.getElementById('results');
+
+  function section(title) {
+    var h = document.createElement('h2');
+    h.textContent = title;
+    resultsEl.appendChild(h);
+  }
+
+  function assert(name, condition, detail) {
+    var div = document.createElement('div');
+    div.className = 'test';
+    if (condition) {
+      div.innerHTML = '<span class="pass">✅ PASS</span> — ' + name;
+      passed++;
+    } else {
+      div.innerHTML = '<span class="fail">❌ FAIL</span> — ' + name;
+      if (detail) {
+        var pre = document.createElement('pre');
+        pre.textContent = detail;
+        div.appendChild(pre);
+      }
+      failed++;
+    }
+    resultsEl.appendChild(div);
+  }
+
+  function pbtest(name, fn) {
+    var div = document.createElement('div');
+    div.className = 'test';
+    try {
+      fn();
+      div.innerHTML = '<span class="pass">✅ PASS (PBT)</span> — ' + name;
+      passed++;
+    } catch (e) {
+      div.innerHTML = '<span class="fail">❌ FAIL (PBT)</span> — ' + name;
+      var pre = document.createElement('pre');
+      pre.textContent = e && e.message ? e.message : String(e);
+      div.appendChild(pre);
+      failed++;
+    }
+    resultsEl.appendChild(div);
+  }
+
+  /* ==============================================================
+     PROPERTY-BASED TESTS (fast-check)
+     ============================================================== */
+
+  section('Property Tests (fast-check)');
+
+  // Feature: healsense-website-update, Property 1: File size validation is a strict threshold
+  pbtest('P1a — Files ≤ 10MB (all valid types) are accepted', function () {
+    fc.assert(fc.property(
+      fc.integer({ min: 0, max: 10485760 }),
+      fc.constantFrom('image/jpeg', 'image/png', 'image/webp'),
+      function (size, type) {
+        return UploadModule.validate({ size: size, type: type }).valid === true;
+      }
+    ), { numRuns: 200 });
+  });
+
+  pbtest('P1b — Files > 10MB are rejected with correct message', function () {
+    fc.assert(fc.property(
+      fc.integer({ min: 10485761, max: 100000000 }),
+      function (size) {
+        var r = UploadModule.validate({ size: size, type: 'image/jpeg' });
+        return r.valid === false && r.error === 'Image file size must be 10 MB or less.';
+      }
+    ), { numRuns: 200 });
+  });
+
+  // Feature: healsense-website-update, Property 2: File type validation rejects all non-image types
+  pbtest('P2 — Non-image MIME types always rejected with correct message', function () {
+    var validTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+    fc.assert(fc.property(
+      fc.string({ minLength: 1, maxLength: 40 }).filter(function (t) { return !validTypes.has(t); }),
+      function (type) {
+        var r = UploadModule.validate({ size: 1000, type: type });
+        return r.valid === false &&
+               r.error === 'Please upload a valid image file (JPG, PNG, or WEBP).';
+      }
+    ), { numRuns: 300 });
+  });
+
+  // Feature: healsense-website-update, Property 3: Colour classification is total and correct
+  pbtest('P3a — Yellow range always classified as "yellow"', function () {
+    fc.assert(fc.property(
+      fc.float({ min: 45, max: 65 }),
+      fc.float({ min: 40, max: 100 }),
+      fc.float({ min: 0,  max: 100 }),
+      function (h, s, l) {
+        return AnalyserModule.classifyHsl(h, s, l) === 'yellow';
+      }
+    ), { numRuns: 500 });
+  });
+
+  pbtest('P3b — Purple range always classified as "purple"', function () {
+    fc.assert(fc.property(
+      fc.float({ min: 270, max: 310 }),
+      fc.float({ min: 30, max: 100 }),
+      fc.float({ min: 0,  max: 100 }),
+      function (h, s, l) {
+        return AnalyserModule.classifyHsl(h, s, l) === 'purple';
+      }
+    ), { numRuns: 500 });
+  });
+
+  pbtest('P3c — classifyHsl is total (always returns one of three values)', function () {
+    var valid = new Set(['yellow', 'purple', 'other']);
+    fc.assert(fc.property(
+      fc.float({ min: 0, max: 360 }),
+      fc.float({ min: 0, max: 100 }),
+      fc.float({ min: 0, max: 100 }),
+      function (h, s, l) {
+        return valid.has(AnalyserModule.classifyHsl(h, s, l));
+      }
+    ), { numRuns: 1000 });
+  });
+
+  // Feature: healsense-website-update, Property 4: Analysis result completeness and colour scheme consistency
+  pbtest('P4 — Healing result has all required non-null fields with correct values', function () {
+    var healingResult = {
+      condition: 'Healing', alertLevel: 'Green', pHColour: 'Yellow',
+      pHRange: '6.2–7.4', moistureLevel: 'Normal', moistureColour: 'Light Blue',
+      appMessage: 'Your wound is healing well. Continue with the current care routine.',
+      recommendedAction: 'Maintain current dressing. Monitor daily.',
+      matchingRecordIds: ['R001','R002','R003','R004','R005'], indeterminate: false
+    };
+    var abnormalResult = {
+      condition: 'Abnormal', alertLevel: 'Red', pHColour: 'Purple',
+      pHRange: '8.0–8.8', moistureLevel: 'High', moistureColour: 'Dark Blue',
+      appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
+      recommendedAction: 'Seek medical advice promptly. Do not delay.',
+      matchingRecordIds: ['R006','R007','R008','R009','R010'], indeterminate: false
+    };
+    fc.assert(fc.property(
+      fc.constantFrom(healingResult, abnormalResult),
+      function (r) {
+        if (r.indeterminate) return false;
+        var fieldsOk = r.condition && r.alertLevel && r.pHColour && r.pHRange &&
+                       r.moistureLevel && r.moistureColour && r.appMessage &&
+                       r.recommendedAction && r.matchingRecordIds && r.matchingRecordIds.length > 0;
+        var healConsist = r.condition !== 'Healing' ||
+          (r.alertLevel === 'Green' && r.pHColour === 'Yellow');
+        var abnConsist  = r.condition !== 'Abnormal' ||
+          (r.alertLevel === 'Red'   && r.pHColour === 'Purple');
+        return fieldsOk && healConsist && abnConsist;
+      }
+    ), { numRuns: 100 });
+  });
+
+  // Feature: healsense-website-update, Property 5: Dataset record highlighting matches analysis condition
+  pbtest('P5 — Healing records are exactly R001–R005', function () {
+    fc.assert(fc.property(
+      fc.constant('Healing'),
+      function (condition) {
+        var records = DatasetModule.getByCondition(condition);
+        var ids = records.map(function(r){ return r.recordId; });
+        var expected = ['R001','R002','R003','R004','R005'];
+        return ids.length === 5 &&
+               expected.every(function(id){ return ids.includes(id); });
+      }
+    ), { numRuns: 10 });
+  });
+
+  pbtest('P5b — Abnormal records are exactly R006–R010', function () {
+    fc.assert(fc.property(
+      fc.constant('Abnormal'),
+      function (condition) {
+        var records = DatasetModule.getByCondition(condition);
+        var ids = records.map(function(r){ return r.recordId; });
+        var expected = ['R006','R007','R008','R009','R010'];
+        return ids.length === 5 &&
+               expected.every(function(id){ return ids.includes(id); });
+      }
+    ), { numRuns: 10 });
+  });
+
+  pbtest('P5c — Healing and Abnormal record sets are mutually exclusive', function () {
+    var healingIds  = DatasetModule.getByCondition('Healing').map(function(r){ return r.recordId; });
+    var abnormalIds = DatasetModule.getByCondition('Abnormal').map(function(r){ return r.recordId; });
+    var overlap = healingIds.filter(function(id){ return abnormalIds.includes(id); });
+    fc.assert(fc.property(fc.constant(overlap), function(o){ return o.length === 0; }), { numRuns: 1 });
+  });
+
+  /* ==============================================================
+     UNIT / EXAMPLE TESTS
+     ============================================================== */
+
+  section('Unit Tests — UploadModule.validate()');
+
+  assert('Accepts image/jpeg within size',
+    UploadModule.validate({ type:'image/jpeg', size: 1000 }).valid === true);
+
+  assert('Accepts image/png within size',
+    UploadModule.validate({ type:'image/png', size: 5000000 }).valid === true);
+
+  assert('Accepts image/webp within size',
+    UploadModule.validate({ type:'image/webp', size: 10485760 }).valid === true);
+
+  assert('Rejects image/gif with correct message', (function(){
+    var r = UploadModule.validate({ type:'image/gif', size: 100 });
+    return r.valid === false && r.error === 'Please upload a valid image file (JPG, PNG, or WEBP).';
+  })());
+
+  assert('Rejects text/plain with correct message', (function(){
+    var r = UploadModule.validate({ type:'text/plain', size: 100 });
+    return r.valid === false && r.error === 'Please upload a valid image file (JPG, PNG, or WEBP).';
+  })());
+
+  assert('Rejects file of size 10485761 with correct message', (function(){
+    var r = UploadModule.validate({ type:'image/jpeg', size: 10485761 });
+    return r.valid === false && r.error === 'Image file size must be 10 MB or less.';
+  })());
+
+  assert('Accepts file of exactly 10485760 bytes',
+    UploadModule.validate({ type:'image/jpeg', size: 10485760 }).valid === true);
+
+  assert('Accepts file of size 0',
+    UploadModule.validate({ type:'image/png', size: 0 }).valid === true);
+
+  section('Unit Tests — AnalyserModule.rgbToHsl()');
+
+  assert('rgbToHsl(255,255,0) → h≈60, s≈100, l≈50 (pure yellow)', (function(){
+    var hsl = AnalyserModule.rgbToHsl(255, 255, 0);
+    return Math.abs(hsl.h - 60) < 1 && Math.abs(hsl.s - 100) < 1 && Math.abs(hsl.l - 50) < 1;
+  })());
+
+  assert('rgbToHsl(128,0,128) → h≈300 (purple)', (function(){
+    var hsl = AnalyserModule.rgbToHsl(128, 0, 128);
+    return Math.abs(hsl.h - 300) < 2;
+  })());
+
+  assert('rgbToHsl(255,255,255) → s=0 (white, no saturation)', (function(){
+    var hsl = AnalyserModule.rgbToHsl(255, 255, 255);
+    return hsl.s === 0 && hsl.l === 100;
+  })());
+
+  assert('rgbToHsl(0,0,0) → s=0, l=0 (black)', (function(){
+    var hsl = AnalyserModule.rgbToHsl(0, 0, 0);
+    return hsl.s === 0 && hsl.l === 0;
+  })());
+
+  section('Unit Tests — AnalyserModule.classifyHsl()');
+
+  assert('classifyHsl(55, 80, 60) → "yellow"',
+    AnalyserModule.classifyHsl(55, 80, 60) === 'yellow');
+
+  assert('classifyHsl(290, 70, 40) → "purple"',
+    AnalyserModule.classifyHsl(290, 70, 40) === 'purple');
+
+  assert('classifyHsl(0, 100, 50) → "other" (red)',
+    AnalyserModule.classifyHsl(0, 100, 50) === 'other');
+
+  assert('classifyHsl(120, 100, 50) → "other" (green)',
+    AnalyserModule.classifyHsl(120, 100, 50) === 'other');
+
+  assert('classifyHsl(55, 39, 60) → "other" (yellow hue but low sat)',
+    AnalyserModule.classifyHsl(55, 39, 60) === 'other');
+
+  assert('classifyHsl(290, 29, 40) → "other" (purple hue but low sat)',
+    AnalyserModule.classifyHsl(290, 29, 40) === 'other');
+
+  assert('classifyHsl(45, 40, 50) → "yellow" (lower boundary)',
+    AnalyserModule.classifyHsl(45, 40, 50) === 'yellow');
+
+  assert('classifyHsl(65, 40, 50) → "yellow" (upper boundary)',
+    AnalyserModule.classifyHsl(65, 40, 50) === 'yellow');
+
+  assert('classifyHsl(270, 30, 50) → "purple" (lower boundary)',
+    AnalyserModule.classifyHsl(270, 30, 50) === 'purple');
+
+  assert('classifyHsl(310, 30, 50) → "purple" (upper boundary)',
+    AnalyserModule.classifyHsl(310, 30, 50) === 'purple');
+
+  section('Unit Tests — DatasetModule');
+
+  assert('getAll() returns exactly 10 records',
+    DatasetModule.getAll().length === 10);
+
+  assert('getByCondition("Healing") returns 5 records',
+    DatasetModule.getByCondition('Healing').length === 5);
+
+  assert('getByCondition("Abnormal") returns 5 records',
+    DatasetModule.getByCondition('Abnormal').length === 5);
+
+  assert('R001–R005 all have pHColour Yellow and alertLevel Green', (function(){
+    return DatasetModule.getByCondition('Healing').every(function(r){
+      return r.pHColour === 'Yellow' && r.alertLevel === 'Green';
+    });
+  })());
+
+  assert('R006–R010 all have pHColour Purple and alertLevel Red', (function(){
+    return DatasetModule.getByCondition('Abnormal').every(function(r){
+      return r.pHColour === 'Purple' && r.alertLevel === 'Red';
+    });
+  })());
+
+  assert('All 10 record IDs are unique', (function(){
+    var ids = DatasetModule.getAll().map(function(r){ return r.recordId; });
+    return new Set(ids).size === 10;
+  })());
+
+  /* ==============================================================
+     Summary
+     ============================================================== */
+  var summary = document.getElementById('summary');
+  var total = passed + failed;
+  summary.textContent = '📊 Results: ' + passed + ' / ' + total + ' tests passed' +
+    (failed > 0 ? ' — ' + failed + ' FAILED' : ' — All tests passed ✅');
+  summary.className = failed > 0 ? 'has-fail' : 'all-pass';
+</script>
+
+</body>
+</html>

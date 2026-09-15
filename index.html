@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealSense – Smart Wound Monitoring</title>
+  <meta name="description" content="HealSense is a smart wound monitoring demonstration that analyses wound patch photos to assess healing status using colour classification." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       2.1 CSS Variables and base reset
+       ============================================================ */
+    :root {
+      --color-primary: #0a7ea4;
+      --color-healing: #16a34a;
+      --color-abnormal: #dc2626;
+      --color-bg: #f8fafc;
+      --color-surface: #ffffff;
+      --color-text: #1e293b;
+      --color-text-muted: #64748b;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+      --font-body: 'Inter', system-ui, sans-serif;
+      --transition: 0.25s ease;
+      --touch-target: 44px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+
+    /* ============================================================
+       2.2 Mobile-first navigation bar
+       ============================================================ */
+    #navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      background: var(--color-surface);
+      box-shadow: var(--shadow);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      height: 60px;
+    }
+
+    .nav-brand {
+      font-weight: 700;
+      color: var(--color-primary);
+      font-size: 1.25rem;
+      text-decoration: none;
+    }
+
+    .nav-menu {
+      display: none;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .nav-menu.open {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--color-surface);
+      padding: 1rem 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .nav-link {
+      padding: 0.5rem 0.75rem;
+      color: var(--color-text);
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    .nav-link:hover {
+      background: rgba(10, 126, 164, 0.08);
+      color: var(--color-primary);
+    }
+
+    .nav-link--active {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .hamburger {
+      width: var(--touch-target);
+      height: var(--touch-target);
+      min-width: var(--touch-target);
+      min-height: var(--touch-target);
+      border: none;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: var(--color-text);
+    }
+
+    @media (min-width: 768px) {
+      .nav-menu {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+        position: static;
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .hamburger {
+        display: none;
+      }
+    }
+
+    /* ============================================================
+       2.3 Section and hero styles
+       ============================================================ */
+    section {
+      scroll-margin-top: 70px;
+      padding: 5rem 1.5rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    #home {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding-top: 80px;
+      background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 60%, #ffffff 100%);
+      max-width: none;
+    }
+
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .hero-tagline {
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
+      color: var(--color-text-muted);
+      margin-top: 0.5rem;
+    }
+
+    .hero-description {
+      max-width: 600px;
+      margin: 1.5rem auto;
+      line-height: 1.7;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: #ffffff;
+      padding: 0.875rem 2rem;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      min-height: var(--touch-target);
+      transition: background var(--transition);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .btn-primary:hover {
+      background: #086a8c;
+    }
+
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      color: var(--color-text);
+    }
+
+    /* ============================================================
+       2.4 Upload zone and preview
+       ============================================================ */
+    #upload-zone {
+      border: 2px dashed var(--color-primary);
+      border-radius: var(--radius);
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background var(--transition), border-color var(--transition);
+      background: rgba(10, 126, 164, 0.03);
+    }
+
+    #upload-zone:hover,
+    #upload-zone.drag-over {
+      background: rgba(10, 126, 164, 0.08);
+      border-color: var(--color-primary);
+      border-style: solid;
+    }
+
+    #upload-zone .upload-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    #upload-zone p {
+      color: var(--color-text-muted);
+    }
+
+    #image-preview {
+      display: none;
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: var(--radius);
+      margin-top: 1.5rem;
+      object-fit: contain;
+    }
+
+    #image-preview.visible {
+      display: block;
+    }
+
+    #upload-error {
+      display: none;
+      color: var(--color-abnormal);
+      background: rgba(220, 38, 38, 0.08);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    #upload-error.visible {
+      display: block;
+    }
+
+    #analyse-btn {
+      display: block;
+      margin: 1.5rem auto 0;
+      padding: 0.875rem 2.5rem;
+      background: var(--color-healing);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: var(--touch-target);
+      transition: background var(--transition), opacity var(--transition);
+    }
+
+    #analyse-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ============================================================
+       2.5 Results section and alert badge
+       ============================================================ */
+    #results {
+      display: none;
+    }
+
+    #results.visible {
+      display: block;
+    }
+
+    .result-card {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-card.result-healing {
+      border-left: 6px solid var(--color-healing);
+    }
+
+    .result-card.result-abnormal {
+      border-left: 6px solid var(--color-abnormal);
+    }
+
+    .result-condition {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .result-healing .result-condition {
+      color: var(--color-healing);
+    }
+
+    .result-abnormal .result-condition {
+      color: var(--color-abnormal);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 1rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .badge-green {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-red {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .result-field label {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .result-field span {
+      font-weight: 600;
+    }
+
+    .result-message {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: var(--color-bg);
+      border-radius: 8px;
+      line-height: 1.6;
+    }
+
+    .result-action {
+      margin-top: 0.75rem;
+      font-weight: 500;
+      color: var(--color-text-muted);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .result-card.animated {
+      animation: fadeInUp 0.4s ease forwards;
+    }
+
+    #loading-indicator {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    #loading-indicator.visible {
+      display: block;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(10, 126, 164, 0.2);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #analysis-error {
+      display: none;
+      color: var(--color-abnormal);
+      background: rgba(220, 38, 38, 0.08);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+
+    #analysis-error.visible {
+      display: block;
+    }
+
+    #reset-btn {
+      display: block;
+      margin: 2rem auto 0;
+      padding: 0.75rem 2rem;
+      background: transparent;
+      border: 2px solid var(--color-primary);
+      color: var(--color-primary);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      min-height: var(--touch-target);
+      transition: background var(--transition), color var(--transition);
+    }
+
+    #reset-btn:hover {
+      background: var(--color-primary);
+      color: #ffffff;
+    }
+
+    /* ============================================================
+       2.6 Dataset table
+       ============================================================ */
+    #dataset {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    th {
+      background: var(--color-bg);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: #f8fafc;
+    }
+
+    .row-highlight td {
+      background: #f0fdf4;
+      font-weight: 500;
+    }
+
+    .row-highlight.abnormal td {
+      background: #fef2f2;
+    }
+
+    .badge-sm {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       Mobile responsive adjustments
+       ============================================================ */
+    @media (max-width: 767px) {
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      section {
+        padding: 3rem 1rem;
+      }
+
+      .hero-description {
+        padding: 0 1rem;
+      }
+    }
+
+    @media (max-width: 360px) {
+      body {
+        overflow-x: hidden;
+      }
+
+      section {
+        padding: 2.5rem 0.75rem;
+      }
+
+      .hero-title {
+        font-size: 1.75rem;
+      }
+
+      .hero-tagline {
+        font-size: 0.95rem;
+      }
+
+      .result-condition {
+        font-size: 1.5rem;
+      }
+    }
+
+    /* ============================================================
+       Global error banner
+       ============================================================ */
+    #global-error {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #dc2626;
+      color: #ffffff;
+      padding: 1rem;
+      text-align: center;
+      z-index: 9999;
+      font-weight: 500;
+    }
+
+    .hero-inner { padding: 0 1rem; }
+    .hero-badges { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Global error container (hidden by default) -->
+  <div id="global-error" style="display:none;"></div>
+
+  <!-- Navigation bar skeleton -->
+  <nav id="navbar">
+    <a href="#home" class="nav-brand">💚 HealSense</a>
+    <button class="hamburger" id="nav-toggle" aria-expanded="false" aria-label="Toggle navigation">☰</button>
+    <ul class="nav-menu" id="nav-menu">
+      <li><a href="#home" class="nav-link">Home</a></li>
+      <li><a href="#upload" class="nav-link">Analyse</a></li>
+      <li><a href="#results" class="nav-link">Results</a></li>
+      <li><a href="#dataset" class="nav-link">Dataset</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero / landing section -->
+  <section id="home">
+    <div class="hero-inner">
+      <h1 class="hero-title">HealSense</h1>
+      <p class="hero-tagline">Smart Wound Monitoring · Better Healing</p>
+      <p class="hero-description">
+        A low-cost, circuit-free smart wound patch demonstration. Upload a photo of the patch to analyse wound condition — the pH indicator colour (Yellow or Purple) is used to determine healing status instantly.
+      </p>
+      <div class="hero-badges">
+        <span class="badge badge-green">🟡 Yellow = Healing</span>
+        &nbsp;
+        <span class="badge badge-red">🟣 Purple = Abnormal</span>
+      </div>
+      <a href="#upload" class="btn-primary" style="margin-top:2rem;">📷 Analyse a Patch Photo</a>
+    </div>
+  </section>
+
+  <!-- Upload / Analyse section -->
+  <section id="upload">
+    <h2 class="section-title">📷 Analyse Your Patch</h2>
+    <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">Upload a clear photo of your wound patch. The pH indicator zone colour (Yellow or Purple) will be analysed automatically.</p>
+
+    <div id="upload-zone">
+      <span class="upload-icon">⬆️</span>
+      <p><strong>Click to upload</strong> or drag &amp; drop a patch photo here</p>
+      <p style="font-size:0.85rem; margin-top:0.5rem;">Supports JPG, PNG, WEBP · Max 10 MB</p>
+      <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp" style="display:none;" aria-label="Upload patch photo" />
+    </div>
+
+    <img id="image-preview" alt="Uploaded patch preview" />
+    <div id="upload-error" role="alert"></div>
+
+    <button id="analyse-btn" disabled>🔬 Analyse Patch</button>
+  </section>
+
+  <!-- Results display section -->
+  <section id="results">
+    <h2 class="section-title">📊 Analysis Result</h2>
+
+    <div id="loading-indicator" role="status" aria-label="Analysing patch">
+      <div class="spinner"></div>
+      <p style="margin-top:1rem; color: var(--color-text-muted);">Analysing patch colour…</p>
+    </div>
+
+    <div id="analysis-error" role="alert"></div>
+
+    <div class="result-card" id="result-card" style="display:none;">
+      <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
+        <h3 class="result-condition" id="result-condition-text">—</h3>
+        <span class="badge" id="alert-badge">—</span>
+      </div>
+
+      <div class="result-grid">
+        <div class="result-field">
+          <label>pH Colour</label>
+          <span id="result-ph-colour">—</span>
+        </div>
+        <div class="result-field">
+          <label>pH Range</label>
+          <span id="result-ph-range">—</span>
+        </div>
+        <div class="result-field">
+          <label>Moisture Level</label>
+          <span id="result-moisture-level">—</span>
+        </div>
+        <div class="result-field">
+          <label>Moisture Colour</label>
+          <span id="result-moisture-colour">—</span>
+        </div>
+      </div>
+
+      <div class="result-message">
+        <strong>Status Message:</strong>
+        <p id="result-app-message" style="margin-top:0.5rem;">—</p>
+      </div>
+
+      <div class="result-action">
+        💡 <strong>Recommended Action:</strong> <span id="result-recommended-action">—</span>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <strong style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--color-text-muted);">Matched Dataset Records</strong>
+        <p id="result-matched-records" style="margin-top:0.35rem; font-weight:600;">—</p>
+      </div>
+    </div>
+
+    <button id="reset-btn" style="display:none;">↩ Upload Another Photo</button>
+  </section>
+
+  <!-- Reference dataset table section -->
+  <section id="dataset">
+    <h2 class="section-title">📋 Reference Dataset</h2>
+    <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">10 reference records (R001–R010) used to map patch colour readings to wound conditions and recommended actions.</p>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Record ID</th>
+            <th>Patch ID</th>
+            <th>Date / Time</th>
+            <th>pH Reading</th>
+            <th>pH Colour</th>
+            <th>Moisture Level</th>
+            <th>Moisture Colour</th>
+            <th>Wound Condition</th>
+            <th>Wound Status</th>
+            <th>Alert Level</th>
+            <th>App Message</th>
+            <th>Recommended Action</th>
+          </tr>
+        </thead>
+        <tbody id="dataset-tbody">
+          <!-- Populated by DatasetModule -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+    /* ============================================================
+       Global error handler
+       ============================================================ */
+    window.onerror = function (message, source, lineno, colno, error) {
+      var errorDiv = document.getElementById('global-error');
+      if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'global-error';
+        document.body.insertBefore(errorDiv, document.body.firstChild);
+      }
+      errorDiv.textContent = 'An unexpected error occurred. Please refresh the page and try again.';
+      errorDiv.style.display = 'block';
+      return true;
+    };
+
+    /* ============================================================
+       Task 4 — DatasetModule
+       Holds all 10 static records and renders the dataset table.
+       ============================================================ */
+    var DatasetModule = (function () {
+      var RECORDS = [
+        {
+          recordId: 'R001', patchId: 'P001', dateTime: '2024-01-01 08:00',
+          pHReading: 6.2, pHColour: 'Yellow', moistureLevel: 'Normal',
+          moistureColour: 'Light Blue', woundCondition: 'Healing', woundStatus: 'Healing',
+          alertLevel: 'Green',
+          appMessage: 'Your wound is healing well. Continue with the current care routine.',
+          recommendedAction: 'Maintain current dressing. Monitor daily.'
+        },
+        {
+          recordId: 'R002', patchId: 'P002', dateTime: '2024-01-02 09:00',
+          pHReading: 6.5, pHColour: 'Yellow', moistureLevel: 'Normal',
+          moistureColour: 'Light Blue', woundCondition: 'Healing', woundStatus: 'Healing',
+          alertLevel: 'Green',
+          appMessage: 'Your wound is healing well. Continue with the current care routine.',
+          recommendedAction: 'Maintain current dressing. Monitor daily.'
+        },
+        {
+          recordId: 'R003', patchId: 'P003', dateTime: '2024-01-03 10:00',
+          pHReading: 6.8, pHColour: 'Yellow', moistureLevel: 'Normal',
+          moistureColour: 'Light Blue', woundCondition: 'Healing', woundStatus: 'Healing',
+          alertLevel: 'Green',
+          appMessage: 'Your wound is healing well. Continue with the current care routine.',
+          recommendedAction: 'Maintain current dressing. Monitor daily.'
+        },
+        {
+          recordId: 'R004', patchId: 'P004', dateTime: '2024-01-04 11:00',
+          pHReading: 7.0, pHColour: 'Yellow', moistureLevel: 'Normal',
+          moistureColour: 'Light Blue', woundCondition: 'Healing', woundStatus: 'Healing',
+          alertLevel: 'Green',
+          appMessage: 'Your wound is healing well. Continue with the current care routine.',
+          recommendedAction: 'Maintain current dressing. Monitor daily.'
+        },
+        {
+          recordId: 'R005', patchId: 'P005', dateTime: '2024-01-05 12:00',
+          pHReading: 7.4, pHColour: 'Yellow', moistureLevel: 'High',
+          moistureColour: 'Dark Blue', woundCondition: 'Healing', woundStatus: 'Healing',
+          alertLevel: 'Green',
+          appMessage: 'Your wound is healing well. Continue with the current care routine.',
+          recommendedAction: 'Maintain current dressing. Monitor daily.'
+        },
+        {
+          recordId: 'R006', patchId: 'P006', dateTime: '2024-01-06 08:30',
+          pHReading: 8.0, pHColour: 'Purple', moistureLevel: 'Normal',
+          moistureColour: 'Light Blue', woundCondition: 'Abnormal', woundStatus: 'Abnormal',
+          alertLevel: 'Red',
+          appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
+          recommendedAction: 'Seek medical advice promptly. Do not delay.'
+        },
+        {
+          recordId: 'R007', patchId: 'P007', dateTime: '2024-01-07 09:30',
+          pHReading: 8.2, pHColour: 'Purple', moistureLevel: 'High',
+          moistureColour: 'Dark Blue', woundCondition: 'Abnormal', woundStatus: 'Abnormal',
+          alertLevel: 'Red',
+          appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
+          recommendedAction: 'Seek medical advice promptly. Do not delay.'
+        },
+        {
+          recordId: 'R008', patchId: 'P008', dateTime: '2024-01-08 10:30',
+          pHReading: 8.4, pHColour: 'Purple', moistureLevel: 'High',
+          moistureColour: 'Dark Blue', woundCondition: 'Abnormal', woundStatus: 'Abnormal',
+          alertLevel: 'Red',
+          appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
+          recommendedAction: 'Seek medical advice promptly. Do not delay.'
+        },
+        {
+          recordId: 'R009', patchId: 'P009', dateTime: '2024-01-09 11:30',
+          pHReading: 8.6, pHColour: 'Purple', moistureLevel: 'High',
+          moistureColour: 'Dark Blue', woundCondition: 'Abnormal', woundStatus: 'Abnormal',
+          alertLevel: 'Red',
+          appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
+          recommendedAction: 'Seek medical advice promptly. Do not delay.'
+        },
+        {
+          recordId: 'R010', patchId: 'P010', dateTime: '2024-01-10 12:30',
+          pHReading: 8.8, pHColour: 'Purple', moistureLevel: 'High',
+          moistureColour: 'Dark Blue', woundCondition: 'Abnormal', woundStatus: 'Abnormal',
+          alertLevel: 'Red',
+          appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
+          recommendedAction: 'Seek medical advice promptly. Do not delay.'
+        }
+      ];
+
+      function getAll() { return RECORDS; }
+
+      function getByCondition(condition) {
+        return RECORDS.filter(function (r) { return r.woundCondition === condition; });
+      }
+
+      function badgeClass(alertLevel) {
+        return alertLevel === 'Green'
+          ? 'badge-sm badge-green'
+          : 'badge-sm badge-red';
+      }
+
+      function renderTable() {
+        var tbody = document.getElementById('dataset-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        RECORDS.forEach(function (r) {
+          var tr = document.createElement('tr');
+          tr.setAttribute('data-record-id', r.recordId);
+          if (r.woundCondition === 'Abnormal') tr.classList.add('abnormal');
+          tr.innerHTML = [
+            '<td>' + r.recordId + '</td>',
+            '<td>' + r.patchId + '</td>',
+            '<td>' + r.dateTime + '</td>',
+            '<td>' + r.pHReading + '</td>',
+            '<td>' + r.pHColour + '</td>',
+            '<td>' + r.moistureLevel + '</td>',
+            '<td>' + r.moistureColour + '</td>',
+            '<td>' + r.woundCondition + '</td>',
+            '<td>' + r.woundStatus + '</td>',
+            '<td><span class="' + badgeClass(r.alertLevel) + '">' + r.alertLevel + '</span></td>',
+            '<td style="max-width:200px; white-space:normal;">' + r.appMessage + '</td>',
+            '<td style="max-width:200px; white-space:normal;">' + r.recommendedAction + '</td>'
+          ].join('');
+          tbody.appendChild(tr);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', renderTable);
+
+      return { getAll: getAll, getByCondition: getByCondition };
+    })();
+
+    /* ============================================================
+       Task 5 — UploadModule
+       Handles file validation, preview, drag-and-drop, and reset.
+       ============================================================ */
+    var UploadModule = (function () {
+      var MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+      var ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+      var _currentImage = null;
+
+      // 5.1 validate
+      function validate(file) {
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          return { valid: false, error: 'Please upload a valid image file (JPG, PNG, or WEBP).' };
+        }
+        if (file.size > MAX_SIZE) {
+          return { valid: false, error: 'Image file size must be 10 MB or less.' };
+        }
+        return { valid: true, error: null };
+      }
+
+      // 5.2 preview
+      function preview(file) {
+        return new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            var img = document.getElementById('image-preview');
+            img.src = e.target.result;
+            img.classList.add('visible');
+            // Wait for image to load so AnalyserModule can use it
+            var tempImg = new Image();
+            tempImg.onload = function () {
+              _currentImage = tempImg;
+              resolve(tempImg);
+            };
+            tempImg.onerror = reject;
+            tempImg.src = e.target.result;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // 5.3 reset
+      function reset() {
+        var fileInput = document.getElementById('file-input');
+        var imgPreview = document.getElementById('image-preview');
+        var uploadError = document.getElementById('upload-error');
+        var analyseBtn = document.getElementById('analyse-btn');
+        fileInput.value = '';
+        imgPreview.src = '';
+        imgPreview.classList.remove('visible');
+        uploadError.textContent = '';
+        uploadError.classList.remove('visible');
+        analyseBtn.disabled = true;
+        _currentImage = null;
+      }
+
+      function showError(msg) {
+        var el = document.getElementById('upload-error');
+        el.textContent = msg;
+        el.classList.add('visible');
+      }
+
+      function hideError() {
+        var el = document.getElementById('upload-error');
+        el.textContent = '';
+        el.classList.remove('visible');
+      }
+
+      function getCurrentImage() { return _currentImage; }
+
+      function handleFile(file) {
+        hideError();
+        var result = validate(file);
+        if (!result.valid) {
+          showError(result.error);
+          document.getElementById('analyse-btn').disabled = true;
+          return;
+        }
+        preview(file).then(function () {
+          document.getElementById('analyse-btn').disabled = false;
+        }).catch(function () {
+          showError('Could not load the image. Please try another file.');
+        });
+      }
+
+      // 5.4 init — wire up all event listeners
+      function init() {
+        var zone = document.getElementById('upload-zone');
+        var fileInput = document.getElementById('file-input');
+        var analyseBtn = document.getElementById('analyse-btn');
+
+        // Click on zone triggers file input
+        zone.addEventListener('click', function (e) {
+          if (e.target !== fileInput) fileInput.click();
+        });
+
+        // File input change
+        fileInput.addEventListener('change', function () {
+          if (fileInput.files && fileInput.files[0]) {
+            handleFile(fileInput.files[0]);
+          }
+        });
+
+        // Drag events
+        zone.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', function () {
+          zone.classList.remove('drag-over');
+        });
+        zone.addEventListener('drop', function (e) {
+          e.preventDefault();
+          zone.classList.remove('drag-over');
+          hideError();
+          var files = e.dataTransfer && e.dataTransfer.files;
+          if (files && files[0]) handleFile(files[0]);
+        });
+
+        // Analyse button click with no image
+        analyseBtn.addEventListener('click', function () {
+          if (!_currentImage) {
+            showError('Please upload a patch photo first.');
+          }
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', init);
+
+      return { validate: validate, preview: preview, reset: reset, getCurrentImage: getCurrentImage };
+    })();
+
+    /* ============================================================
+       Task 6 — AnalyserModule
+       Canvas-based HSL colour classification.
+       ============================================================ */
+    var AnalyserModule = (function () {
+
+      // 6.1 rgbToHsl — converts RGB (0-255) to HSL { h:0-360, s:0-100, l:0-100 }
+      function rgbToHsl(r, g, b) {
+        r /= 255; g /= 255; b /= 255;
+        var max = Math.max(r, g, b), min = Math.min(r, g, b);
+        var h, s, l = (max + min) / 2;
+        if (max === min) {
+          h = s = 0;
+        } else {
+          var d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+            case g: h = ((b - r) / d + 2) / 6; break;
+            case b: h = ((r - g) / d + 4) / 6; break;
+          }
+        }
+        return { h: h * 360, s: s * 100, l: l * 100 };
+      }
+
+      // 6.2 classifyHsl — returns "yellow" | "purple" | "other"
+      function classifyHsl(h, s, l) {
+        if (h >= 45 && h <= 65 && s >= 40) return 'yellow';
+        if (h >= 270 && h <= 310 && s >= 30) return 'purple';
+        return 'other';
+      }
+
+      // 6.3 analyse — full Canvas pixel-sampling pipeline
+      function analyse(imageElement) {
+        var canvas = document.createElement('canvas');
+        var MAX_DIM = 400;
+        var scale = Math.min(MAX_DIM / imageElement.naturalWidth, MAX_DIM / imageElement.naturalHeight, 1);
+        canvas.width  = Math.round(imageElement.naturalWidth  * scale);
+        canvas.height = Math.round(imageElement.naturalHeight * scale);
+
+        try {
+          var ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('canvas-unavailable');
+          ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+
+          var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          var yellowCount = 0, purpleCount = 0, totalCount = 0;
+          var blueMeanSum = 0, bluePixels = 0;
+          var STEP = 4; // sample every 4th pixel
+
+          for (var i = 0; i < data.length; i += 4 * STEP) {
+            var r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+            if (a < 128) continue; // skip transparent pixels
+            var hsl = rgbToHsl(r, g, b);
+            var cls = classifyHsl(hsl.h, hsl.s, hsl.l);
+            if (cls === 'yellow') yellowCount++;
+            else if (cls === 'purple') purpleCount++;
+            blueMeanSum += b;
+            bluePixels++;
+            totalCount++;
+          }
+
+          if (totalCount === 0) {
+            return { indeterminate: true };
+          }
+
+          var yellowRatio = yellowCount / totalCount;
+          var purpleRatio = purpleCount / totalCount;
+          var THRESHOLD = 0.20;
+
+          var meanBlue = bluePixels > 0 ? blueMeanSum / bluePixels : 0;
+          var moistureLevel  = meanBlue >= 128 ? 'High'       : 'Normal';
+          var moistureColour = meanBlue >= 128 ? 'Dark Blue'  : 'Light Blue';
+
+          if (yellowRatio >= THRESHOLD || (yellowRatio > purpleRatio && yellowRatio > 0.05)) {
+            return {
+              condition: 'Healing',
+              alertLevel: 'Green',
+              pHColour: 'Yellow',
+              pHRange: '6.2–7.4',
+              moistureLevel: moistureLevel,
+              moistureColour: moistureColour,
+              appMessage: 'Your wound is healing well. Continue with the current care routine.',
+              recommendedAction: 'Maintain current dressing. Monitor daily.',
+              matchingRecordIds: ['R001', 'R002', 'R003', 'R004', 'R005'],
+              indeterminate: false
+            };
+          }
+
+          if (purpleRatio >= THRESHOLD || (purpleRatio > yellowRatio && purpleRatio > 0.05)) {
+            return {
+              condition: 'Abnormal',
+              alertLevel: 'Red',
+              pHColour: 'Purple',
+              pHRange: '8.0–8.8',
+              moistureLevel: moistureLevel,
+              moistureColour: moistureColour,
+              appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
+              recommendedAction: 'Seek medical advice promptly. Do not delay.',
+              matchingRecordIds: ['R006', 'R007', 'R008', 'R009', 'R010'],
+              indeterminate: false
+            };
+          }
+
+          return { indeterminate: true };
+
+        } catch (e) {
+          if (e.message === 'canvas-unavailable') throw e;
+          return { indeterminate: true };
+        }
+      }
+
+      return { rgbToHsl: rgbToHsl, classifyHsl: classifyHsl, analyse: analyse };
+    })();
+
+    /* ============================================================
+       Task 7 — ResultsModule
+       Renders analysis results, highlights dataset rows, and resets.
+       ============================================================ */
+    var ResultsModule = (function () {
+
+      // 7.2 highlightDatasetRows
+      function highlightDatasetRows(recordIds) {
+        var rows = document.querySelectorAll('#dataset-tbody tr');
+        rows.forEach(function (row) {
+          row.classList.remove('row-highlight');
+        });
+        if (!recordIds || recordIds.length === 0) return;
+        rows.forEach(function (row) {
+          if (recordIds.indexOf(row.getAttribute('data-record-id')) !== -1) {
+            row.classList.add('row-highlight');
+          }
+        });
+      }
+
+      // 7.1 render
+      function render(result) {
+        var resultsSection   = document.getElementById('results');
+        var loadingIndicator = document.getElementById('loading-indicator');
+        var analysisError    = document.getElementById('analysis-error');
+        var resultCard       = document.getElementById('result-card');
+        var resetBtn         = document.getElementById('reset-btn');
+
+        loadingIndicator.classList.remove('visible');
+
+        if (result.indeterminate) {
+          analysisError.textContent = 'Colour could not be determined. Please ensure the patch is well-lit and clearly visible in the photo.';
+          analysisError.classList.add('visible');
+          resultsSection.classList.add('visible');
+          resultsSection.scrollIntoView({ behavior: 'smooth' });
+          return;
+        }
+
+        // Populate fields
+        document.getElementById('result-condition-text').textContent = result.condition === 'Healing' ? '✅ Healing Wound' : '⚠️ Abnormal Wound';
+        document.getElementById('result-ph-colour').textContent      = result.pHColour;
+        document.getElementById('result-ph-range').textContent       = result.pHRange;
+        document.getElementById('result-moisture-level').textContent = result.moistureLevel;
+        document.getElementById('result-moisture-colour').textContent= result.moistureColour;
+        document.getElementById('result-app-message').textContent    = result.appMessage;
+        document.getElementById('result-recommended-action').textContent = result.recommendedAction;
+        document.getElementById('result-matched-records').textContent = result.matchingRecordIds.join(', ');
+
+        var badge = document.getElementById('alert-badge');
+        badge.textContent = result.alertLevel === 'Green' ? '🟢 Green — Healing' : '🔴 Red — Abnormal';
+        badge.className = 'badge ' + (result.alertLevel === 'Green' ? 'badge-green' : 'badge-red');
+
+        // Apply theme class
+        resultCard.className = 'result-card ' + (result.condition === 'Healing' ? 'result-healing' : 'result-abnormal');
+        // Trigger animation
+        resultCard.classList.remove('animated');
+        void resultCard.offsetWidth; // force reflow
+        resultCard.classList.add('animated');
+
+        resultCard.style.display = 'block';
+        resetBtn.style.display   = 'block';
+        analysisError.classList.remove('visible');
+
+        resultsSection.classList.add('visible');
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+
+        highlightDatasetRows(result.matchingRecordIds);
+      }
+
+      // 7.3 reset
+      function reset() {
+        var resultsSection = document.getElementById('results');
+        var resultCard     = document.getElementById('result-card');
+        var resetBtn       = document.getElementById('reset-btn');
+        var analysisError  = document.getElementById('analysis-error');
+
+        resultsSection.classList.remove('visible');
+        resultCard.style.display = 'none';
+        resetBtn.style.display   = 'none';
+        analysisError.classList.remove('visible');
+        analysisError.textContent = '';
+
+        // Clear fields
+        ['result-condition-text','result-ph-colour','result-ph-range',
+         'result-moisture-level','result-moisture-colour','result-app-message',
+         'result-recommended-action','result-matched-records'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = '—';
+        });
+        var badge = document.getElementById('alert-badge');
+        if (badge) { badge.textContent = '—'; badge.className = 'badge'; }
+
+        highlightDatasetRows([]);
+      }
+
+      // 7.4 wire reset button
+      document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('reset-btn').addEventListener('click', function () {
+          reset();
+          UploadModule.reset();
+          document.getElementById('upload').scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+
+      // 7.5 wire analyse button → full analysis flow
+      document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('analyse-btn').addEventListener('click', function () {
+          var img = UploadModule.getCurrentImage();
+          if (!img) return;
+
+          var loadingIndicator = document.getElementById('loading-indicator');
+          var analysisError    = document.getElementById('analysis-error');
+          var analyseBtn       = document.getElementById('analyse-btn');
+          var resultsSection   = document.getElementById('results');
+
+          // Show loading
+          loadingIndicator.classList.add('visible');
+          analysisError.classList.remove('visible');
+          analyseBtn.disabled = true;
+          resultsSection.classList.add('visible');
+          resultsSection.scrollIntoView({ behavior: 'smooth' });
+
+          // Yield to browser paint, then analyse
+          setTimeout(function () {
+            try {
+              var result = AnalyserModule.analyse(img);
+              render(result);
+            } catch (e) {
+              loadingIndicator.classList.remove('visible');
+              if (e.message === 'canvas-unavailable') {
+                analysisError.textContent = 'Analysis is not supported in this browser. Please use Chrome, Firefox, Safari, or Edge.';
+              } else {
+                analysisError.textContent = 'An unexpected error occurred. Please refresh the page and try again.';
+              }
+              analysisError.classList.add('visible');
+            } finally {
+              analyseBtn.disabled = false;
+            }
+          }, 50);
+        });
+      });
+
+      return { render: render, reset: reset, highlightDatasetRows: highlightDatasetRows };
+    })();
+
+    /* ============================================================
+       Task 8 — NavModule
+       Hamburger toggle, smooth scroll, active link highlighting.
+       ============================================================ */
+    var NavModule = (function () {
+      document.addEventListener('DOMContentLoaded', function () {
+        var toggle  = document.getElementById('nav-toggle');
+        var menu    = document.getElementById('nav-menu');
+        var navLinks = document.querySelectorAll('.nav-link');
+        var sections = document.querySelectorAll('section[id]');
+
+        // Hamburger toggle
+        toggle.addEventListener('click', function () {
+          var isOpen = menu.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          toggle.textContent = isOpen ? '✕' : '☰';
+        });
+
+        // Close menu and smooth-scroll on link click
+        navLinks.forEach(function (link) {
+          link.addEventListener('click', function (e) {
+            var href = link.getAttribute('href');
+            if (href && href.startsWith('#')) {
+              e.preventDefault();
+              var target = document.querySelector(href);
+              if (target) target.scrollIntoView({ behavior: 'smooth' });
+            }
+            menu.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.textContent = '☰';
+          });
+        });
+
+        // Active link highlighting via IntersectionObserver
+        if ('IntersectionObserver' in window) {
+          var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                navLinks.forEach(function (l) { l.classList.remove('nav-link--active'); });
+                var id = entry.target.getAttribute('id');
+                var activeLink = document.querySelector('.nav-link[href="#' + id + '"]');
+                if (activeLink) activeLink.classList.add('nav-link--active');
+              }
+            });
+          }, { threshold: 0.4 });
+          sections.forEach(function (s) { observer.observe(s); });
+        }
+      });
+    })();
+
+  </script>
+
+</body>
+</html>
