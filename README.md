@@ -237,6 +237,18 @@ The project was originally planned with an Arduino circuit but was updated to a 
 
 ---
 
+## 📱 QR Code
+
+Scan this QR code on any phone or tablet to open the HealSense website instantly — no typing needed.
+
+[![HealSense QR Code](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://sohamrp172-sys.github.io/vighanesh)](https://sohamrp172-sys.github.io/vighanesh)
+
+**🌐 Live link:** [https://sohamrp172-sys.github.io/vighanesh](https://sohamrp172-sys.github.io/vighanesh)
+
+> Point your phone camera at the QR code above to open the website directly. Great for demonstrations — print it out or display it on screen next to your physical patch model.
+
+---
+
 ## ⚠️ Disclaimer
 
 > **This website is a demonstration prototype created for educational and exhibition purposes only.**

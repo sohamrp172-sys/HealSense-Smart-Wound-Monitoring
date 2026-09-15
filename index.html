@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- QR code generator (works offline after first load) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
     /* ============================================================
        2.1 CSS Variables and base reset
@@ -549,6 +551,56 @@
 
     .hero-inner { padding: 0 1rem; }
     .hero-badges { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+
+    /* ============================================================
+       QR Code section
+       ============================================================ */
+    #qr {
+      text-align: center;
+    }
+    .qr-wrapper {
+      display: inline-block;
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 2rem 2.5rem;
+    }
+    #qr-code {
+      margin: 0 auto 1.25rem;
+      display: flex;
+      justify-content: center;
+    }
+    #qr-code canvas, #qr-code img { border-radius: 8px; }
+    .qr-url {
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      word-break: break-all;
+      margin-bottom: 1rem;
+    }
+    .qr-url a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+    .qr-url a:hover { text-decoration: underline; }
+    .qr-download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.75rem;
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      min-height: var(--touch-target);
+      transition: background var(--transition);
+    }
+    .qr-download-btn:hover { background: #086a8c; }
+    .qr-note {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
   </style>
 </head>
 <body>
@@ -565,6 +617,7 @@
       <li><a href="#upload" class="nav-link">Analyse</a></li>
       <li><a href="#results" class="nav-link">Results</a></li>
       <li><a href="#dataset" class="nav-link">Dataset</a></li>
+      <li><a href="#qr" class="nav-link">QR Code</a></li>
     </ul>
   </nav>
 
@@ -672,6 +725,26 @@
     </div>
 
     <button id="reset-btn" style="display:none;">↩ Upload Another Photo</button>
+  </section>
+
+  <!-- QR Code section -->
+  <section id="qr">
+    <h2 class="section-title">📲 Scan to Open on Any Device</h2>
+    <p style="color: var(--color-text-muted); margin-bottom: 2rem; text-align:center;">
+      Scan this QR code with any phone or tablet to open HealSense instantly — perfect for demonstrations.
+    </p>
+    <div class="qr-wrapper">
+      <div id="qr-code"></div>
+      <p class="qr-url">
+        🌐 <a href="https://sohamrp172-sys.github.io/vighanesh" target="_blank">
+          https://sohamrp172-sys.github.io/vighanesh
+        </a>
+      </p>
+      <a id="qr-download" class="qr-download-btn" download="HealSense-QR.png">
+        ⬇️ Download QR Code
+      </a>
+      <p class="qr-note">Right-click the QR code and save as image, or use the download button above.</p>
+    </div>
   </section>
 
   <!-- Reference dataset table section -->
@@ -1264,8 +1337,7 @@
     })();
 
     /* ============================================================
-       Task 8 — NavModule
-       Hamburger toggle, smooth scroll, active link highlighting.
+       Task 8 — NavModule       Hamburger toggle, smooth scroll, active link highlighting.
        ============================================================ */
     var NavModule = (function () {
       document.addEventListener('DOMContentLoaded', function () {
@@ -1312,6 +1384,44 @@
         }
       });
     })();
+
+    /* ============================================================
+       QR Code Generator
+       Generates QR code for the live GitHub Pages URL on load.
+       ============================================================ */
+    document.addEventListener('DOMContentLoaded', function () {
+      var SITE_URL = 'https://sohamrp172-sys.github.io/vighanesh';
+      var qrContainer = document.getElementById('qr-code');
+      var downloadBtn = document.getElementById('qr-download');
+
+      if (!qrContainer) return;
+
+      if (typeof QRCode !== 'undefined') {
+        // Generate as canvas
+        QRCode.toCanvas(SITE_URL, { width: 220, margin: 2, color: { dark: '#1e293b', light: '#ffffff' } }, function (err, canvas) {
+          if (err) {
+            qrContainer.innerHTML = '<p style="color:#dc2626;">Could not generate QR code. Please go online and refresh.</p>';
+            return;
+          }
+          canvas.style.borderRadius = '8px';
+          qrContainer.appendChild(canvas);
+
+          // Wire download button
+          downloadBtn.href = canvas.toDataURL('image/png');
+          downloadBtn.style.display = 'inline-flex';
+        });
+      } else {
+        // Fallback: use Google Charts API (requires internet)
+        var img = document.createElement('img');
+        img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl=' + encodeURIComponent(SITE_URL) + '&choe=UTF-8';
+        img.alt = 'HealSense QR Code';
+        img.style.borderRadius = '8px';
+        qrContainer.appendChild(img);
+
+        downloadBtn.href = img.src;
+        downloadBtn.style.display = 'inline-flex';
+      }
+    });
 
   </script>
 
