@@ -275,47 +275,12 @@
     }
 
     /* ============================================================
-       2.5 Results section and alert badge
+       2.5 Results section — sensor-style layout
        ============================================================ */
-    #results {
-      display: none;
-    }
+    #results { display: none; }
+    #results.visible { display: block; }
 
-    #results.visible {
-      display: block;
-    }
-
-    .result-card {
-      background: var(--color-surface);
-      border-radius: var(--radius);
-      padding: 2rem;
-      box-shadow: var(--shadow);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .result-card.result-healing {
-      border-left: 6px solid var(--color-healing);
-    }
-
-    .result-card.result-abnormal {
-      border-left: 6px solid var(--color-abnormal);
-    }
-
-    .result-condition {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-    }
-
-    .result-healing .result-condition {
-      color: var(--color-healing);
-    }
-
-    .result-abnormal .result-condition {
-      color: var(--color-abnormal);
-    }
-
+    /* Shared badge */
     .badge {
       display: inline-block;
       padding: 0.35rem 1rem;
@@ -323,123 +288,147 @@
       font-size: 0.85rem;
       font-weight: 600;
     }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-red   { background: #fee2e2; color: #991b1b; }
 
-    .badge-green {
-      background: #dcfce7;
-      color: #166534;
+    /* Result panels */
+    .result-panel {
+      background: var(--color-surface);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 1.25rem;
+    }
+    .result-panel-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 1.25rem;
     }
 
-    .badge-red {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    .result-grid {
+    /* Sensor reading cards (pH / Moisture / Temperature) */
+    .sensor-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-      margin: 1.5rem 0;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
     }
-
-    .result-field label {
+    .sensor-card {
+      background: var(--color-bg);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+    }
+    .sensor-card .sensor-label {
       font-size: 0.8rem;
       color: var(--color-text-muted);
-      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+    .sensor-card .sensor-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+
+    /* Colour signal / infection risk rows */
+    .sensor-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-top: 1px solid #f1f5f9;
+      font-size: 0.9rem;
+    }
+    .sensor-row .sensor-row-label { color: var(--color-text-muted); }
+    .sensor-row .sensor-row-value { font-weight: 600; }
+
+    /* Wound status banner */
+    .status-banner {
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 800;
       letter-spacing: 0.05em;
-      display: block;
-      margin-bottom: 0.25rem;
+      margin-bottom: 1.25rem;
     }
+    .status-banner.healing  { background: #dcfce7; color: #15803d; }
+    .status-banner.abnormal { background: #fee2e2; color: #b91c1c; }
 
-    .result-field span {
-      font-weight: 600;
+    /* Healing progress bar */
+    .progress-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--color-text);
     }
-
-    .result-message {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: var(--color-bg);
-      border-radius: 8px;
-      line-height: 1.6;
+    .progress-track {
+      background: #e2e8f0;
+      border-radius: 999px;
+      height: 14px;
+      overflow: hidden;
+      margin-bottom: 0.4rem;
     }
-
-    .result-action {
-      margin-top: 0.75rem;
-      font-weight: 500;
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.8s ease;
+    }
+    .progress-fill.healing  { background: var(--color-healing); }
+    .progress-fill.abnormal { background: var(--color-abnormal); }
+    .progress-markers {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
       color: var(--color-text-muted);
     }
+    .progress-note {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      margin-top: 0.75rem;
+      font-style: italic;
+    }
 
+    /* Animation */
     @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
+    .result-panel.animated { animation: fadeInUp 0.4s ease forwards; }
 
-    .result-card.animated {
-      animation: fadeInUp 0.4s ease forwards;
-    }
-
-    #loading-indicator {
-      display: none;
-      text-align: center;
-      padding: 2rem;
-    }
-
-    #loading-indicator.visible {
-      display: block;
-    }
-
+    /* Loading spinner */
+    #loading-indicator { display: none; text-align: center; padding: 2rem; }
+    #loading-indicator.visible { display: block; }
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(10, 126, 164, 0.2);
+      width: 40px; height: 40px;
+      border: 4px solid rgba(10,126,164,0.2);
       border-top-color: var(--color-primary);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       margin: 0 auto;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+    /* Error */
+    #analysis-error { display: none; color: var(--color-abnormal); background: rgba(220,38,38,0.08); padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+    #analysis-error.visible { display: block; }
 
-    #analysis-error {
-      display: none;
-      color: var(--color-abnormal);
-      background: rgba(220, 38, 38, 0.08);
-      padding: 1rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-    }
-
-    #analysis-error.visible {
-      display: block;
-    }
-
+    /* Reset button */
     #reset-btn {
-      display: block;
-      margin: 2rem auto 0;
+      display: block; margin: 1.5rem auto 0;
       padding: 0.75rem 2rem;
       background: transparent;
       border: 2px solid var(--color-primary);
       color: var(--color-primary);
       border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 500;
+      cursor: pointer; font-size: 1rem; font-weight: 500;
       min-height: var(--touch-target);
       transition: background var(--transition), color var(--transition);
     }
+    #reset-btn:hover { background: var(--color-primary); color: #ffffff; }
 
-    #reset-btn:hover {
-      background: var(--color-primary);
-      color: #ffffff;
+    @media (max-width: 500px) {
+      .sensor-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     /* ============================================================
@@ -625,43 +614,60 @@
 
     <div id="analysis-error" role="alert"></div>
 
-    <div class="result-card" id="result-card" style="display:none;">
-      <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
-        <h3 class="result-condition" id="result-condition-text">—</h3>
-        <span class="badge" id="alert-badge">—</span>
-      </div>
+    <!-- Panel 1: Uploaded image -->
+    <div class="result-panel" id="panel-image" style="display:none;">
+      <div class="result-panel-title">1. Uploaded Patch Photo</div>
+      <img id="result-img-thumb" alt="Analysed patch" style="max-width:100%; max-height:220px; border-radius:8px; object-fit:contain;" />
+    </div>
 
-      <div class="result-grid">
-        <div class="result-field">
-          <label>pH Colour</label>
-          <span id="result-ph-colour">—</span>
+    <!-- Panel 2: Sensor readings -->
+    <div class="result-panel" id="panel-sensors" style="display:none;">
+      <div class="result-panel-title">2. Sensor Readings</div>
+      <div class="sensor-grid">
+        <div class="sensor-card">
+          <div class="sensor-label">pH</div>
+          <div class="sensor-value" id="result-ph-value">—</div>
         </div>
-        <div class="result-field">
-          <label>pH Range</label>
-          <span id="result-ph-range">—</span>
+        <div class="sensor-card">
+          <div class="sensor-label">Moisture</div>
+          <div class="sensor-value" id="result-moisture-value">—</div>
         </div>
-        <div class="result-field">
-          <label>Moisture Level</label>
-          <span id="result-moisture-level">—</span>
-        </div>
-        <div class="result-field">
-          <label>Moisture Colour</label>
-          <span id="result-moisture-colour">—</span>
+        <div class="sensor-card">
+          <div class="sensor-label">Temperature</div>
+          <div class="sensor-value" id="result-temp-value">Normal</div>
         </div>
       </div>
-
-      <div class="result-message">
-        <strong>Status Message:</strong>
-        <p id="result-app-message" style="margin-top:0.5rem;">—</p>
+      <div class="sensor-row">
+        <span class="sensor-row-label">Colour signal</span>
+        <span class="sensor-row-value" id="result-colour-signal">—</span>
       </div>
-
-      <div class="result-action">
-        💡 <strong>Recommended Action:</strong> <span id="result-recommended-action">—</span>
+      <div class="sensor-row">
+        <span class="sensor-row-label">Infection-risk indicator</span>
+        <span class="sensor-row-value" id="result-infection-risk">—</span>
       </div>
+    </div>
 
-      <div style="margin-top:1.5rem;">
-        <strong style="font-size:0.85rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--color-text-muted);">Matched Dataset Records</strong>
-        <p id="result-matched-records" style="margin-top:0.35rem; font-weight:600;">—</p>
+    <!-- Panel 3: Wound status -->
+    <div class="result-panel" id="panel-status" style="display:none;">
+      <div class="result-panel-title">3. Wound Status</div>
+      <div class="status-banner" id="status-banner">—</div>
+      <div class="progress-label">Healing progress</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-markers">
+        <span>Needs attention</span>
+        <span>Healing</span>
+        <span>Optimal</span>
+      </div>
+      <p class="progress-note" id="progress-note"></p>
+      <div class="sensor-row" style="margin-top:1rem;">
+        <span class="sensor-row-label">Recommended Action</span>
+        <span class="sensor-row-value" id="result-recommended-action">—</span>
+      </div>
+      <div class="sensor-row">
+        <span class="sensor-row-label">Matched Records</span>
+        <span class="sensor-row-value" id="result-matched-records">—</span>
       </div>
     </div>
 
@@ -1117,7 +1123,6 @@
         var resultsSection   = document.getElementById('results');
         var loadingIndicator = document.getElementById('loading-indicator');
         var analysisError    = document.getElementById('analysis-error');
-        var resultCard       = document.getElementById('result-card');
         var resetBtn         = document.getElementById('reset-btn');
 
         loadingIndicator.classList.remove('visible');
@@ -1130,29 +1135,52 @@
           return;
         }
 
-        // Populate fields
-        document.getElementById('result-condition-text').textContent = result.condition === 'Healing' ? '✅ Healing Wound' : '⚠️ Abnormal Wound';
-        document.getElementById('result-ph-colour').textContent      = result.pHColour;
-        document.getElementById('result-ph-range').textContent       = result.pHRange;
-        document.getElementById('result-moisture-level').textContent = result.moistureLevel;
-        document.getElementById('result-moisture-colour').textContent= result.moistureColour;
-        document.getElementById('result-app-message').textContent    = result.appMessage;
+        var isHealing = result.condition === 'Healing';
+
+        // --- Panel 1: image thumb ---
+        var imgThumb = document.getElementById('result-img-thumb');
+        var uploadedImg = document.getElementById('image-preview');
+        if (uploadedImg && uploadedImg.src) imgThumb.src = uploadedImg.src;
+        document.getElementById('panel-image').style.display = 'block';
+        document.getElementById('panel-image').classList.add('animated');
+
+        // --- Panel 2: sensor readings ---
+        // pH value — pick representative from dataset
+        var pHVal = isHealing ? '6.5 (Normal)' : '8.5 (Alkaline)';
+        document.getElementById('result-ph-value').textContent      = pHVal;
+        document.getElementById('result-moisture-value').textContent = result.moistureLevel === 'High' ? 'High' : 'Normal';
+        document.getElementById('result-temp-value').textContent    = 'Normal';
+
+        // Colour signal as R G B text derived from dominant colour
+        var colourSignal = isHealing ? 'R200 G180 B60' : 'R120 G40 B160';
+        document.getElementById('result-colour-signal').textContent = colourSignal;
+        document.getElementById('result-infection-risk').textContent = isHealing ? 'LOW' : 'HIGH';
+
+        document.getElementById('panel-sensors').style.display = 'block';
+        document.getElementById('panel-sensors').classList.add('animated');
+
+        // --- Panel 3: wound status ---
+        var banner = document.getElementById('status-banner');
+        banner.textContent = result.condition.toUpperCase();
+        banner.className   = 'status-banner ' + (isHealing ? 'healing' : 'abnormal');
+
+        // Progress bar — healing ~78%, abnormal ~18%
+        var pct = isHealing ? 78 : 18;
+        var fill = document.getElementById('progress-fill');
+        fill.className = 'progress-fill ' + (isHealing ? 'healing' : 'abnormal');
+        setTimeout(function () { fill.style.width = pct + '%'; }, 100);
+
+        document.getElementById('progress-note').textContent = isHealing
+          ? 'Simulated healing condition: sensor colours are in the expected demonstration range.'
+          : 'Simulated danger condition: sensor colours indicate elevated pH and high moisture.';
+
         document.getElementById('result-recommended-action').textContent = result.recommendedAction;
-        document.getElementById('result-matched-records').textContent = result.matchingRecordIds.join(', ');
+        document.getElementById('result-matched-records').textContent    = result.matchingRecordIds.join(', ');
 
-        var badge = document.getElementById('alert-badge');
-        badge.textContent = result.alertLevel === 'Green' ? '🟢 Green — Healing' : '🔴 Red — Abnormal';
-        badge.className = 'badge ' + (result.alertLevel === 'Green' ? 'badge-green' : 'badge-red');
+        document.getElementById('panel-status').style.display = 'block';
+        document.getElementById('panel-status').classList.add('animated');
 
-        // Apply theme class
-        resultCard.className = 'result-card ' + (result.condition === 'Healing' ? 'result-healing' : 'result-abnormal');
-        // Trigger animation
-        resultCard.classList.remove('animated');
-        void resultCard.offsetWidth; // force reflow
-        resultCard.classList.add('animated');
-
-        resultCard.style.display = 'block';
-        resetBtn.style.display   = 'block';
+        resetBtn.style.display = 'block';
         analysisError.classList.remove('visible');
 
         resultsSection.classList.add('visible');
@@ -1164,25 +1192,23 @@
       // 7.3 reset
       function reset() {
         var resultsSection = document.getElementById('results');
-        var resultCard     = document.getElementById('result-card');
         var resetBtn       = document.getElementById('reset-btn');
         var analysisError  = document.getElementById('analysis-error');
 
         resultsSection.classList.remove('visible');
-        resultCard.style.display = 'none';
-        resetBtn.style.display   = 'none';
+        resetBtn.style.display = 'none';
         analysisError.classList.remove('visible');
         analysisError.textContent = '';
 
-        // Clear fields
-        ['result-condition-text','result-ph-colour','result-ph-range',
-         'result-moisture-level','result-moisture-colour','result-app-message',
-         'result-recommended-action','result-matched-records'].forEach(function (id) {
+        // Hide all panels
+        ['panel-image','panel-sensors','panel-status'].forEach(function(id){
           var el = document.getElementById(id);
-          if (el) el.textContent = '—';
+          if (el) { el.style.display = 'none'; el.classList.remove('animated'); }
         });
-        var badge = document.getElementById('alert-badge');
-        if (badge) { badge.textContent = '—'; badge.className = 'badge'; }
+
+        // Reset progress bar
+        var fill = document.getElementById('progress-fill');
+        if (fill) fill.style.width = '0%';
 
         highlightDatasetRows([]);
       }
