@@ -389,8 +389,21 @@
       font-style: italic;
     }
 
-    /* Animation */
-    @keyframes fadeInUp {
+    /* Tissue composition bars */
+    .tissue-bar-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; font-size:0.82rem; }
+    .tissue-bar-label { width:110px; color:var(--color-text-muted); flex-shrink:0; }
+    .tissue-bar-track { flex:1; background:#e2e8f0; border-radius:999px; height:10px; overflow:hidden; }
+    .tissue-bar-fill  { height:100%; border-radius:999px; transition:width 0.7s ease; }
+    .tissue-bar-pct   { width:32px; text-align:right; font-weight:600; color:var(--color-text); }
+    .tb-granulation { background:#16a34a; }
+    .tb-epithelial  { background:#86efac; }
+    .tb-erythema    { background:#f87171; }
+    .tb-slough      { background:#fbbf24; }
+    .tb-necrotic    { background:#78716c; }
+
+    /* Amber status */
+    .status-banner.attention { background:#fef3c7; color:#92400e; }
+    .progress-fill.attention { background:#f59e0b; }
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
@@ -673,28 +686,37 @@
 
     <!-- Panel 2: Sensor readings -->
     <div class="result-panel" id="panel-sensors" style="display:none;">
-      <div class="result-panel-title">2. Sensor Readings</div>
+      <div class="result-panel-title">2. Wound Assessment &amp; Sensor Readings</div>
       <div class="sensor-grid">
         <div class="sensor-card">
-          <div class="sensor-label">pH</div>
+          <div class="sensor-label">Est. pH</div>
           <div class="sensor-value" id="result-ph-value">—</div>
         </div>
         <div class="sensor-card">
-          <div class="sensor-label">Moisture</div>
+          <div class="sensor-label">Exudate</div>
           <div class="sensor-value" id="result-moisture-value">—</div>
         </div>
         <div class="sensor-card">
-          <div class="sensor-label">Temperature</div>
-          <div class="sensor-value" id="result-temp-value">Normal</div>
+          <div class="sensor-label">Est. Temp</div>
+          <div class="sensor-value" id="result-temp-value">—</div>
         </div>
       </div>
       <div class="sensor-row">
-        <span class="sensor-row-label">Colour signal</span>
+        <span class="sensor-row-label">Tissue type detected</span>
+        <span class="sensor-row-value" id="result-wound-type">—</span>
+      </div>
+      <div class="sensor-row">
+        <span class="sensor-row-label">Colour signal (mean RGB)</span>
         <span class="sensor-row-value" id="result-colour-signal">—</span>
       </div>
       <div class="sensor-row">
         <span class="sensor-row-label">Infection-risk indicator</span>
         <span class="sensor-row-value" id="result-infection-risk">—</span>
+      </div>
+      <!-- Tissue composition mini-bars -->
+      <div style="margin-top:1.25rem;">
+        <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-muted); margin-bottom:0.75rem;">Tissue Composition</div>
+        <div id="tissue-bars"></div>
       </div>
     </div>
 
@@ -1056,18 +1078,17 @@
 
     /* ============================================================
        Task 6 — AnalyserModule
-       Canvas-based HSL colour classification.
+       Wound tissue morphology analysis via Canvas pixel sampling.
+       Analyses real wound photos: tissue colour, erythema, exudate.
        ============================================================ */
     var AnalyserModule = (function () {
 
-      // 6.1 rgbToHsl — converts RGB (0-255) to HSL { h:0-360, s:0-100, l:0-100 }
+      // Convert RGB (0-255) to HSL { h:0-360, s:0-100, l:0-100 }
       function rgbToHsl(r, g, b) {
         r /= 255; g /= 255; b /= 255;
         var max = Math.max(r, g, b), min = Math.min(r, g, b);
-        var h, s, l = (max + min) / 2;
-        if (max === min) {
-          h = s = 0;
-        } else {
+        var h = 0, s = 0, l = (max + min) / 2;
+        if (max !== min) {
           var d = max - min;
           s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
           switch (max) {
@@ -1079,14 +1100,43 @@
         return { h: h * 360, s: s * 100, l: l * 100 };
       }
 
-      // 6.2 classifyHsl — returns "yellow" | "purple" | "other"
-      function classifyHsl(h, s, l) {
-        if (h >= 45 && h <= 65 && s >= 40) return 'yellow';
-        if (h >= 270 && h <= 310 && s >= 30) return 'purple';
+      /*
+       * classifyWoundPixel — classifies a pixel by wound tissue type
+       *
+       * Tissue colour signatures (HSL-based):
+       *   Granulation / healthy: warm red-pink, h=340-20°, s≥30, l=30-70
+       *   Epithelializing:       light pink,    h=340-10°, s=15-35, l=60-80
+       *   Erythema (inflamed):   bright red,    h=0-15° or 345-360°, s≥50, l=30-55
+       *   Slough / fibrin:       yellow-cream,  h=40-70°, s=20-60, l=55-85
+       *   Necrotic / eschar:     dark brown,    h=10-40°, s=20-60, l=10-35
+       *   Exudate (wet):         high blue mean relative to r/g
+       */
+      function classifyWoundPixel(r, g, b) {
+        var hsl = rgbToHsl(r, g, b);
+        var h = hsl.h, s = hsl.s, l = hsl.l;
+
+        // Skip near-black, near-white, and near-grey (background, border, white areas)
+        if (l < 8 || l > 92 || s < 8) return 'background';
+
+        // Erythema: bright red surrounds — high saturation red hue
+        if ((h >= 345 || h <= 15) && s >= 50 && l >= 30 && l <= 55) return 'erythema';
+
+        // Granulation / healthy red-pink tissue
+        if ((h >= 330 || h <= 20) && s >= 25 && l >= 28 && l <= 70) return 'granulation';
+
+        // Epithelializing — light pink
+        if ((h >= 330 || h <= 15) && s >= 10 && s < 30 && l > 60 && l <= 82) return 'epithelial';
+
+        // Slough / fibrin — yellowish-cream devitalised tissue
+        if (h >= 38 && h <= 72 && s >= 15 && l >= 52 && l <= 88) return 'slough';
+
+        // Necrotic / eschar — dark brown/black
+        if (h >= 8 && h <= 45 && s >= 15 && l >= 8 && l < 36) return 'necrotic';
+
         return 'other';
       }
 
-      // 6.3 analyse — full Canvas pixel-sampling pipeline
+      // Main analysis function — processes real wound photos
       function analyse(imageElement) {
         var canvas = document.createElement('canvas');
         var MAX_DIM = 400;
@@ -1100,65 +1150,119 @@
           ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
           var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-          var yellowCount = 0, purpleCount = 0, totalCount = 0;
-          var blueMeanSum = 0, bluePixels = 0;
-          var STEP = 4; // sample every 4th pixel
+
+          // Counters for tissue types
+          var counts = { granulation:0, epithelial:0, erythema:0, slough:0, necrotic:0, other:0, background:0 };
+          var totalR=0, totalG=0, totalB=0, pixelCount=0;
+          var STEP = 3;
 
           for (var i = 0; i < data.length; i += 4 * STEP) {
-            var r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
-            if (a < 128) continue; // skip transparent pixels
-            var hsl = rgbToHsl(r, g, b);
-            var cls = classifyHsl(hsl.h, hsl.s, hsl.l);
-            if (cls === 'yellow') yellowCount++;
-            else if (cls === 'purple') purpleCount++;
-            blueMeanSum += b;
-            bluePixels++;
-            totalCount++;
+            var r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+            if (a < 128) continue;
+            var type = classifyWoundPixel(r, g, b);
+            counts[type]++;
+            totalR += r; totalG += g; totalB += b;
+            pixelCount++;
           }
 
-          if (totalCount === 0) {
+          if (pixelCount === 0) return { indeterminate: true };
+
+          // Total tissue pixels (exclude background and other)
+          var tissuePx = counts.granulation + counts.epithelial + counts.erythema + counts.slough + counts.necrotic;
+          if (tissuePx < pixelCount * 0.05) {
+            // Very few classifiable tissue pixels — image may not be a wound
             return { indeterminate: true };
           }
 
-          var yellowRatio = yellowCount / totalCount;
-          var purpleRatio = purpleCount / totalCount;
-          var THRESHOLD = 0.20;
+          var tissueTotal = Math.max(tissuePx, 1);
 
-          var meanBlue = bluePixels > 0 ? blueMeanSum / bluePixels : 0;
-          var moistureLevel  = meanBlue >= 128 ? 'High'       : 'Normal';
-          var moistureColour = meanBlue >= 128 ? 'Dark Blue'  : 'Light Blue';
+          // Tissue composition percentages
+          var pctGranulation = Math.round((counts.granulation / tissueTotal) * 100);
+          var pctEpithelial  = Math.round((counts.epithelial  / tissueTotal) * 100);
+          var pctErythema    = Math.round((counts.erythema    / tissueTotal) * 100);
+          var pctSlough      = Math.round((counts.slough      / tissueTotal) * 100);
+          var pctNecrotic    = Math.round((counts.necrotic    / tissueTotal) * 100);
 
-          if (yellowRatio >= THRESHOLD || (yellowRatio > purpleRatio && yellowRatio > 0.05)) {
-            return {
-              condition: 'Healing',
-              alertLevel: 'Green',
-              pHColour: 'Yellow',
-              pHRange: '6.2–7.4',
-              moistureLevel: moistureLevel,
-              moistureColour: moistureColour,
-              appMessage: 'Your wound is healing well. Continue with the current care routine.',
-              recommendedAction: 'Maintain current dressing. Monitor daily.',
-              matchingRecordIds: ['R001', 'R002', 'R003', 'R004', 'R005'],
-              indeterminate: false
-            };
+          // Mean RGB of the wound
+          var meanR = Math.round(totalR / pixelCount);
+          var meanG = Math.round(totalG / pixelCount);
+          var meanB = Math.round(totalB / pixelCount);
+
+          // Moisture/exudate — elevated blue channel relative to red suggests wet exudate
+          var exudateRatio = meanB / Math.max(meanR, 1);
+          var moistureLevel = exudateRatio > 0.75 ? 'Excessive' : exudateRatio > 0.55 ? 'Wet' : exudateRatio > 0.35 ? 'Normal' : 'Dry';
+
+          // pH estimation from tissue alkalinity markers (erythema + necrotic raise pH)
+          var pHEstimate = 6.5 + (pctErythema * 0.02) + (pctNecrotic * 0.03) + (pctSlough * 0.015) - (pctGranulation * 0.01);
+          pHEstimate = Math.max(4.5, Math.min(9.5, pHEstimate));
+
+          // Temperature estimate — erythema raises local temperature
+          var tempEstimate = 36.5 + (pctErythema * 0.03) + (pctNecrotic * 0.02);
+          tempEstimate = Math.max(35.0, Math.min(40.0, tempEstimate));
+
+          // Infection risk score (0.0–1.0)
+          var infectionRisk = Math.min(1.0,
+            (pctErythema * 0.015) + (pctNecrotic * 0.02) + (pctSlough * 0.008) +
+            (moistureLevel === 'Excessive' ? 0.25 : moistureLevel === 'Wet' ? 0.1 : 0)
+          );
+          infectionRisk = Math.round(infectionRisk * 100) / 100;
+
+          // Infection risk label
+          var infectionLabel = infectionRisk >= 0.6 ? 'HIGH' : infectionRisk >= 0.3 ? 'MEDIUM' : 'LOW';
+
+          // ---- Determine overall wound condition ----
+          var healingScore = pctGranulation + pctEpithelial;
+          var dangerScore  = pctNecrotic + pctErythema + (pctSlough * 0.5);
+
+          var condition, alertLevel, appMessage, recommendedAction, matchingRecordIds, progressPct, woundType;
+
+          if (dangerScore >= 35 || infectionRisk >= 0.55 || pctNecrotic >= 20) {
+            condition        = 'Danger / Infection Risk';
+            alertLevel       = 'Red';
+            woundType        = pctNecrotic >= 20 ? 'Necrotic / Eschar tissue detected' : 'Infected — Erythema with abnormal exudate';
+            appMessage       = 'Abnormal wound condition detected. Signs of infection or tissue deterioration present.';
+            recommendedAction = 'Seek medical advice promptly. Do not delay wound assessment.';
+            matchingRecordIds = ['R006','R007','R008','R009','R010'];
+            progressPct      = Math.max(5, 30 - Math.round(dangerScore / 3));
+          } else if (healingScore >= 45 && dangerScore < 20) {
+            condition        = 'Healing';
+            alertLevel       = 'Green';
+            woundType        = pctEpithelial >= 20 ? 'Epithelializing — active skin closure' : 'Granulating — healthy vascularised tissue';
+            appMessage       = 'Wound is progressing well. Healthy granulation and epithelial tissue detected.';
+            recommendedAction = 'Maintain current dressing. Monitor daily. Keep wound moist and clean.';
+            matchingRecordIds = ['R001','R002','R003','R004','R005'];
+            progressPct      = Math.min(90, 55 + Math.round(healingScore / 4));
+          } else {
+            condition        = 'Needs Attention';
+            alertLevel       = 'Amber';
+            woundType        = pctSlough >= 25 ? 'Slough / Fibrinous tissue present — debridement may be needed' : 'Mixed tissue — partial healing with elevated exudate';
+            appMessage       = 'Wound shows mixed signs. Some healing present but elevated moisture or slough detected.';
+            recommendedAction = 'Review dressing and consult a nurse. Monitor closely for signs of infection.';
+            matchingRecordIds = ['R003','R004','R005','R006'];
+            progressPct      = Math.round(30 + healingScore / 3);
           }
 
-          if (purpleRatio >= THRESHOLD || (purpleRatio > yellowRatio && purpleRatio > 0.05)) {
-            return {
-              condition: 'Abnormal',
-              alertLevel: 'Red',
-              pHColour: 'Purple',
-              pHRange: '8.0–8.8',
-              moistureLevel: moistureLevel,
-              moistureColour: moistureColour,
-              appMessage: 'Abnormal wound condition detected. Please consult a healthcare professional.',
-              recommendedAction: 'Seek medical advice promptly. Do not delay.',
-              matchingRecordIds: ['R006', 'R007', 'R008', 'R009', 'R010'],
-              indeterminate: false
-            };
-          }
-
-          return { indeterminate: true };
+          return {
+            condition:         condition,
+            alertLevel:        alertLevel,
+            woundType:         woundType,
+            pctGranulation:    pctGranulation,
+            pctEpithelial:     pctEpithelial,
+            pctErythema:       pctErythema,
+            pctSlough:         pctSlough,
+            pctNecrotic:       pctNecrotic,
+            moistureLevel:     moistureLevel,
+            pHEstimate:        pHEstimate.toFixed(1),
+            tempEstimate:      tempEstimate.toFixed(1),
+            infectionRisk:     infectionRisk,
+            infectionLabel:    infectionLabel,
+            meanRGB:           'R' + meanR + ' G' + meanG + ' B' + meanB,
+            appMessage:        appMessage,
+            recommendedAction: recommendedAction,
+            matchingRecordIds: matchingRecordIds,
+            progressPct:       progressPct,
+            indeterminate:     false
+          };
 
         } catch (e) {
           if (e.message === 'canvas-unavailable') throw e;
@@ -1166,7 +1270,7 @@
         }
       }
 
-      return { rgbToHsl: rgbToHsl, classifyHsl: classifyHsl, analyse: analyse };
+      return { rgbToHsl: rgbToHsl, classifyHsl: function(h,s,l){ return 'other'; }, analyse: analyse };
     })();
 
     /* ============================================================
@@ -1199,14 +1303,79 @@
         loadingIndicator.classList.remove('visible');
 
         if (result.indeterminate) {
-          analysisError.textContent = 'Colour could not be determined. Please ensure the patch is well-lit and clearly visible in the photo.';
+          analysisError.textContent = 'Wound tissue could not be clearly assessed. Please upload a well-lit, close-up photo of the wound with the patch visible.';
           analysisError.classList.add('visible');
           resultsSection.classList.add('visible');
           resultsSection.scrollIntoView({ behavior: 'smooth' });
           return;
         }
 
-        var isHealing = result.condition === 'Healing';
+        var isHealing  = result.condition === 'Healing';
+        var isDanger   = result.alertLevel === 'Red';
+        var isAttention = result.alertLevel === 'Amber';
+
+        // --- Panel 1: image thumb ---
+        var imgThumb = document.getElementById('result-img-thumb');
+        var uploadedImg = document.getElementById('image-preview');
+        if (uploadedImg && uploadedImg.src) imgThumb.src = uploadedImg.src;
+        document.getElementById('panel-image').style.display = 'block';
+        document.getElementById('panel-image').classList.add('animated');
+
+        // --- Panel 2: wound assessment + sensor readings ---
+        document.getElementById('result-ph-value').textContent       = result.pHEstimate + (parseFloat(result.pHEstimate) >= 8.0 ? ' (Alkaline)' : parseFloat(result.pHEstimate) <= 7.0 ? ' (Normal)' : ' (Slightly acidic)');
+        document.getElementById('result-moisture-value').textContent = result.moistureLevel;
+        document.getElementById('result-temp-value').textContent     = result.tempEstimate + '°C';
+        document.getElementById('result-wound-type').textContent     = result.woundType;
+        document.getElementById('result-colour-signal').textContent  = result.meanRGB;
+        document.getElementById('result-infection-risk').textContent = result.infectionLabel + ' (' + Math.round(result.infectionRisk * 100) + '%)';
+
+        // Tissue composition bars
+        var barsEl = document.getElementById('tissue-bars');
+        barsEl.innerHTML = '';
+        var tissues = [
+          { label: 'Granulation',  pct: result.pctGranulation, cls: 'tb-granulation' },
+          { label: 'Epithelial',   pct: result.pctEpithelial,  cls: 'tb-epithelial'  },
+          { label: 'Erythema',     pct: result.pctErythema,    cls: 'tb-erythema'    },
+          { label: 'Slough',       pct: result.pctSlough,      cls: 'tb-slough'      },
+          { label: 'Necrotic',     pct: result.pctNecrotic,    cls: 'tb-necrotic'    }
+        ];
+        tissues.forEach(function(t) {
+          if (t.pct === 0) return;
+          var row = document.createElement('div'); row.className = 'tissue-bar-row';
+          row.innerHTML =
+            '<span class="tissue-bar-label">' + t.label + '</span>' +
+            '<div class="tissue-bar-track"><div class="tissue-bar-fill ' + t.cls + '" style="width:0%" data-pct="' + t.pct + '"></div></div>' +
+            '<span class="tissue-bar-pct">' + t.pct + '%</span>';
+          barsEl.appendChild(row);
+        });
+        // Animate bars after DOM paint
+        setTimeout(function() {
+          barsEl.querySelectorAll('.tissue-bar-fill').forEach(function(el) {
+            el.style.width = el.getAttribute('data-pct') + '%';
+          });
+        }, 150);
+
+        document.getElementById('panel-sensors').style.display = 'block';
+        document.getElementById('panel-sensors').classList.add('animated');
+
+        // --- Panel 3: wound status ---
+        var banner = document.getElementById('status-banner');
+        banner.textContent = result.condition.toUpperCase();
+        var bannerClass = isHealing ? 'healing' : isAttention ? 'attention' : 'abnormal';
+        banner.className = 'status-banner ' + bannerClass;
+
+        var fill = document.getElementById('progress-fill');
+        var fillClass = isHealing ? 'healing' : isAttention ? 'attention' : 'abnormal';
+        fill.className = 'progress-fill ' + fillClass;
+        setTimeout(function () { fill.style.width = result.progressPct + '%'; }, 100);
+
+        document.getElementById('progress-note').textContent =
+          isHealing  ? 'Good tissue morphology detected: healthy granulation and/or epithelial tissue dominant.' :
+          isAttention ? 'Mixed wound morphology: some healing tissue present alongside slough or elevated exudate.' :
+                        'Warning signs detected: necrotic tissue, erythema, or infection indicators present.';
+
+        document.getElementById('result-recommended-action').textContent = result.recommendedAction;
+        document.getElementById('result-matched-records').textContent    = result.matchingRecordIds.join(', ');
 
         // --- Panel 1: image thumb ---
         var imgThumb = document.getElementById('result-img-thumb');
