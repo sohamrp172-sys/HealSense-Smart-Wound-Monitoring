@@ -4,13 +4,14 @@
 ![HTML](https://img.shields.io/badge/HTML5-Single%20File-orange?style=flat-square)
 ![CSS](https://img.shields.io/badge/CSS3-Responsive-blue?style=flat-square)
 ![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla-yellow?style=flat-square)
+![Canvas API](https://img.shields.io/badge/Canvas%20API-Wound%20Morphology-purple?style=flat-square)
 ![No Server](https://img.shields.io/badge/Server-None%20Required-green?style=flat-square)
 
 ### 🌐 Live Website → [https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring](https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring)
 
-> **A low-cost, circuit-free smart wound patch demonstration with smartphone-based monitoring.**
+> **A low-cost, circuit-free smart wound patch demonstration with real wound tissue morphology analysis and smartphone-based monitoring.**
 
-HealSense is a single-page web application that demonstrates how a smart wound-healing patch can be monitored using only a smartphone. Upload a photo of the physical patch and the system automatically detects the pH indicator colour — **Yellow** (Healing) or **Purple** (Abnormal) — to assess wound condition instantly, without any electronic circuit or dedicated hardware.
+HealSense is a single-page web application that analyses **real wound photographs** using Canvas API pixel-level tissue classification. Upload a photo of the wound and the system automatically detects tissue morphology — granulation, epithelial, erythema, slough, and necrotic tissue — to produce a complete clinical-style wound assessment report, including estimated pH, exudate level, temperature, infection risk score, and tissue composition breakdown.
 
 ---
 
@@ -18,70 +19,112 @@ HealSense is a single-page web application that demonstrates how a smart wound-h
 
 | Feature | Description |
 |---|---|
-| 📷 **Photo Upload** | Upload a JPG, PNG, or WEBP photo of the patch (up to 10 MB) — no camera access required |
-| 🎨 **Colour Detection** | Canvas API pixel-sampling detects Yellow vs Purple pH indicator automatically |
-| 📊 **Results Display** | Clear wound condition card with alert badge, pH data, moisture level, and recommended action |
-| 📋 **Dataset Reference** | All 10 reference records (R001–R010) displayed in a scrollable table with row highlighting |
-| 📱 **Fully Responsive** | Works on any device — mobile (360px), tablet, and desktop (1920px) |
-| 🌐 **Works Offline** | Zero dependencies — runs by simply opening `index.html` in any browser |
-| 🚦 **Error Handling** | Inline validation messages, graceful fallbacks, no crashes during demo |
+| 📷 **Real Wound Photo Analysis** | Upload any wound photo — system analyses actual tissue colours and morphology |
+| 🔬 **Tissue Morphology Classification** | Detects Granulation, Epithelial, Erythema, Slough, and Necrotic tissue |
+| 📊 **Tissue Composition Bars** | Visual breakdown showing % of each tissue type detected |
+| 🧪 **Estimated pH** | Derived from tissue alkalinity markers (erythema + necrotic tissue raise pH) |
+| 💧 **Exudate Level** | Dry / Normal / Wet / Excessive — from blue channel ratio analysis |
+| 🌡️ **Estimated Temperature** | 35–40°C estimate based on erythema and necrotic tissue presence |
+| ⚠️ **Infection Risk Score** | 0–100% score with LOW / MEDIUM / HIGH classification |
+| 🩹 **3-Level Wound Status** | HEALING · NEEDS ATTENTION · DANGER / INFECTION RISK |
+| 📋 **Dataset Reference** | All 10 reference records (R001–R010) with row highlighting |
+| 📲 **Built-in QR Code** | Auto-generated QR code for instant access on any device |
+| 📱 **Fully Responsive** | Works on mobile (360px), tablet, and desktop (1920px) |
+| 🌐 **Works Offline** | Zero dependencies — open `index.html` in any browser |
 
 ---
 
-## 🔬 How It Works
+## 🔬 How It Works — Wound Tissue Morphology Analysis
 
-The physical HealSense patch uses two indicator zones:
+HealSense analyses the **actual wound tissue** in the uploaded photo by sampling every pixel using the Canvas API and classifying each one by its HSL colour signature.
 
-1. **pH Indicator Zone** — Universal pH indicator paper that changes colour based on wound fluid pH
-2. **Moisture Indicator Zone** — Absorbent tissue that turns blue based on moisture level
+### Tissue Classification Table
 
-### Colour → Condition Logic
-
-| pH Indicator Colour | pH Range | Wound Condition | Alert Level |
+| Tissue Type | Colour Signature | HSL Range | Clinical Meaning |
 |---|---|---|---|
-| 🟡 **Yellow** | 6.2 – 7.4 | ✅ Healing | 🟢 Green |
-| 🟣 **Purple** | 8.0 – 8.8 | ⚠️ Abnormal | 🔴 Red |
+| � **Granulation** | Warm red-pink | H: 330–20°, S ≥ 25%, L: 28–70% | Healthy vascularised tissue — good healing |
+| 🌸 **Epithelial** | Light pink | H: 330–10°, S: 10–30%, L: 60–82% | Active skin closure — near-healed |
+| � **Erythema** | Bright red | H: 0–15° or 345–360°, S ≥ 50%, L: 30–55% | Inflammation / infection halo |
+| 🟡 **Slough** | Yellow-cream | H: 38–72°, S: 15–60%, L: 52–88% | Devitalised fibrinous tissue |
+| ⚫ **Necrotic** | Dark brown/black | H: 8–45°, S: 15–60%, L: 8–36% | Dead tissue — critical indicator |
 
-### Analysis Flow
+### Analysis Pipeline
 
 ```
-Upload patch photo
+Upload wound photo
        ↓
-Canvas API samples pixels (400×400 max, 4px grid step)
+Canvas API draws image at max 400×400px
        ↓
-Each pixel converted: RGB → HSL
+Every 3rd pixel sampled → RGB converted to HSL
        ↓
-Classify: Yellow (hue 45–65°, sat ≥40%) or Purple (hue 270–310°, sat ≥30%)
+Each pixel classified into tissue type
        ↓
-Dominant colour (≥20% of pixels) determines wound condition
+Tissue composition percentages calculated
        ↓
-Results displayed with pH range, moisture level, and recommended action
+pH estimated from tissue alkalinity markers
+Exudate level from blue channel ratio
+Temperature estimated from erythema density
+Infection risk score computed (0.0–1.0)
        ↓
-Matching dataset rows highlighted in the Reference Dataset table
+Overall wound condition determined:
+  ┌─ HEALING: Granulation + Epithelial ≥ 45%, danger < 20%
+  ├─ NEEDS ATTENTION: Mixed tissue / elevated slough
+  └─ DANGER: Necrotic ≥ 20% or infection risk ≥ 55%
+       ↓
+Results displayed with tissue bars, sensor readings,
+wound status banner, healing progress bar
 ```
+
+### Wound Status Logic
+
+| Status | Trigger Conditions | Alert |
+|---|---|---|
+| ✅ **HEALING** | Granulation + Epithelial ≥ 45%, danger score < 20% | 🟢 Green |
+| ⚠️ **NEEDS ATTENTION** | Mixed tissue, slough present, elevated exudate | 🟡 Amber |
+| 🚨 **DANGER / INFECTION RISK** | Necrotic ≥ 20%, Erythema heavy, or infection risk ≥ 55% | 🔴 Red |
 
 ---
 
-## 📋 Dataset
+## 📊 Sensor Readings — What Each Metric Means
 
-10 reference records used to validate and contextualise the analysis results.
+| Metric | How Calculated | Range |
+|---|---|---|
+| **Est. pH** | Base 6.5 + erythema contribution + necrotic contribution − granulation offset | 4.5 – 9.5 |
+| **Exudate Level** | Blue channel ratio vs red channel mean | Dry / Normal / Wet / Excessive |
+| **Est. Temperature** | Base 36.5°C + erythema density × 0.03 + necrotic density × 0.02 | 35.0 – 40.0°C |
+| **Infection Risk** | Weighted sum: erythema% × 1.5 + necrotic% × 2 + slough% × 0.8 + exudate bonus | 0% – 100% |
+| **Colour Signal** | Mean RGB values across all sampled pixels | R0–255 G0–255 B0–255 |
 
-| Record ID | Patch ID | pH Reading | pH Colour | Moisture | Wound Condition | Alert |
-|---|---|---|---|---|---|---|
-| R001 | P001 | 6.2 | Yellow | Normal | Healing | 🟢 Green |
-| R002 | P002 | 6.5 | Yellow | Normal | Healing | 🟢 Green |
-| R003 | P003 | 6.8 | Yellow | Normal | Healing | 🟢 Green |
-| R004 | P004 | 7.0 | Yellow | Normal | Healing | 🟢 Green |
-| R005 | P005 | 7.4 | Yellow | High | Healing | 🟢 Green |
-| R006 | P006 | 8.0 | Purple | Normal | Abnormal | 🔴 Red |
-| R007 | P007 | 8.2 | Purple | High | Abnormal | 🔴 Red |
-| R008 | P008 | 8.4 | Purple | High | Abnormal | 🔴 Red |
-| R009 | P009 | 8.6 | Purple | High | Abnormal | 🔴 Red |
-| R010 | P010 | 8.8 | Purple | High | Abnormal | 🔴 Red |
+---
 
-**Recommended Actions:**
-- **Healing (R001–R005):** Maintain current dressing. Monitor daily.
-- **Abnormal (R006–R010):** Seek medical advice promptly. Do not delay.
+## 📋 Reference Dataset
+
+10 reference records used to contextualise analysis results.
+
+| Record ID | pH | pH Colour | Moisture | Wound Condition | Alert |
+|---|---|---|---|---|---|
+| R001 | 6.2 | Yellow | Normal | Healing | 🟢 Green |
+| R002 | 6.5 | Yellow | Normal | Healing | 🟢 Green |
+| R003 | 6.8 | Yellow | Normal | Healing | 🟢 Green |
+| R004 | 7.0 | Yellow | Normal | Healing | 🟢 Green |
+| R005 | 7.4 | Yellow | High | Healing | 🟢 Green |
+| R006 | 8.0 | Purple | Normal | Abnormal | 🔴 Red |
+| R007 | 8.2 | Purple | High | Abnormal | 🔴 Red |
+| R008 | 8.4 | Purple | High | Abnormal | 🔴 Red |
+| R009 | 8.6 | Purple | High | Abnormal | 🔴 Red |
+| R010 | 8.8 | Purple | High | Abnormal | 🔴 Red |
+
+---
+
+## 📲 QR Code
+
+Scan this QR code on any phone or tablet to open HealSense instantly — no typing needed.
+
+[![HealSense QR Code](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring)](https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring)
+
+**🌐 Live link:** [https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring](https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring)
+
+> Point your phone camera at the QR code above to open the website directly. Great for demonstrations — print it out or display it on screen next to your physical patch model.
 
 ---
 
@@ -95,52 +138,58 @@ No installation, no server, no build step required.
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-username/healsense-website-update.git
+git clone https://github.com/sohamrp172-sys/HealSense-Smart-Wound-Monitoring.git
 
 # Open in browser (Windows)
 start index.html
 
 # Open in browser (macOS)
 open index.html
-
-# Open in browser (Linux)
-xdg-open index.html
 ```
 
-> **No `npm install`, no `npm start`, no Python server needed.** Just open and go.
+> **No `npm install`, no server needed.** Just open and go.
 
 ---
 
 ## 📖 Usage
 
-### Step 1 — Navigate to the Analyse section
-Click **"Analyse a Patch Photo"** on the home screen or use the **Analyse** link in the navigation bar.
+### Step 1 — Open the Analyse section
+Click **"Analyse a Patch Photo"** on the home screen.
 
-### Step 2 — Upload a patch photo
-- Click the upload zone **or** drag and drop an image file
-- Accepted formats: **JPG, PNG, WEBP** · Maximum size: **10 MB**
-- A preview of your uploaded image will appear immediately
+### Step 2 — Upload a wound photo
+- Click the upload zone or drag and drop an image
+- Accepted: **JPG, PNG, WEBP** · Maximum: **10 MB**
+- A preview appears immediately
 
 ### Step 3 — Run the analysis
 Click **"🔬 Analyse Patch"**. The system will:
-- Sample the pixel colours in your image using the Canvas API
-- Classify the dominant colour as Yellow or Purple
-- Determine wound condition and moisture level
+- Sample every 3rd pixel in the wound photo
+- Classify tissue by HSL colour signature
+- Calculate pH, exudate, temperature, and infection risk
+- Determine overall wound condition
 
 ### Step 4 — Read the result
-The result card shows:
-- ✅ **Wound Condition** — Healing or Abnormal
-- 🔴/🟢 **Alert Badge** — colour-coded at a glance
-- **pH Colour & Range** — detected indicator colour and associated pH
-- **Moisture Level & Colour** — Normal or High
-- **Status Message** — plain-language interpretation
-- **Recommended Action** — what to do next
-- **Matched Dataset Records** — which reference records correspond to this result
 
-Matching rows in the **Reference Dataset** table are highlighted automatically.
+**Panel 1 — Uploaded Photo**
+Your wound image displayed for reference.
 
-### Step 5 — Reset and try again
-Click **"↩ Upload Another Photo"** to clear the result and upload a new image.
+**Panel 2 — Wound Assessment & Sensor Readings**
+- Est. pH and classification (Normal / Alkaline)
+- Exudate level (Dry / Normal / Wet / Excessive)
+- Estimated skin temperature (°C)
+- Detected tissue type description
+- Mean RGB colour signal
+- Infection risk score and label
+- Tissue composition bars (% of each tissue type)
+
+**Panel 3 — Wound Status**
+- HEALING / NEEDS ATTENTION / DANGER status banner
+- Animated healing progress bar
+- Recommended action
+- Matched dataset records (highlighted in table)
+
+### Step 5 — Reset
+Click **"↩ Upload Another Photo"** to analyse a new image.
 
 ---
 
@@ -149,23 +198,23 @@ Click **"↩ Upload Another Photo"** to clear the result and upload a new image.
 | Technology | Purpose |
 |---|---|
 | **HTML5** | Single-file page structure and semantic markup |
-| **CSS3** | Responsive layout (flexbox/grid), CSS variables, keyframe animations |
+| **CSS3** | Responsive layout, CSS variables, keyframe animations, tissue bars |
 | **Vanilla JavaScript** | Five IIFE modules: NavModule, UploadModule, AnalyserModule, DatasetModule, ResultsModule |
-| **Canvas API** | Offscreen image pixel sampling for colour classification |
+| **Canvas API** | Pixel-level wound tissue morphology classification (HSL analysis) |
 | **FileReader API** | Reading uploaded image files for preview and analysis |
-| **IntersectionObserver API** | Active navigation link highlighting as user scrolls |
-| **fast-check** (CDN, tests only) | Property-based testing for pure logic functions |
-| **Google Fonts (Inter)** | Typography — loads from CDN, degrades gracefully offline |
+| **IntersectionObserver API** | Active navigation link highlighting |
+| **QR Generator** | Self-contained inline QR code algorithm (no CDN) |
+| **Google Fonts (Inter)** | Typography — degrades gracefully offline |
 
 ---
 
 ## 📁 Project Structure
 
 ```
-healsense-website-update/
+HealSense-Smart-Wound-Monitoring/
 │
-├── index.html      ← Complete website (HTML + CSS + JS, single file, no server)
-├── tests.html      ← Test suite (property-based + unit tests, open in browser)
+├── index.html      ← Complete website (HTML + CSS + JS, single file)
+├── tests.html      ← Test suite (property-based + unit tests)
 └── README.md       ← This file
 ```
 
@@ -175,38 +224,35 @@ healsense-website-update/
 index.html
 ├── <head>
 │   ├── meta (charset, viewport, title, description)
-│   ├── <link> Google Fonts (Inter) — optional, degrades gracefully
-│   └── <style> — all CSS (design tokens, responsive layout, animations)
+│   ├── <link> Google Fonts
+│   └── <style> — all CSS
 └── <body>
-    ├── #global-error        — fixed error banner (shown only on JS crash)
-    ├── <nav #navbar>        — fixed top navigation + hamburger menu
-    ├── <section #home>      — hero / landing section
-    ├── <section #upload>    — photo upload zone + analyse button
-    ├── <section #results>   — analysis result card + reset button
+    ├── #global-error        — fixed error banner
+    ├── <nav #navbar>        — navigation + hamburger menu
+    ├── <section #home>      — hero / landing
+    ├── <section #upload>    — photo upload zone
+    ├── <section #results>   — 3-panel analysis result
+    │   ├── Panel 1: Uploaded photo
+    │   ├── Panel 2: Wound assessment (tissue bars, pH, exudate, temp, infection risk)
+    │   └── Panel 3: Wound status + progress bar
+    ├── <section #qr>        — auto-generated QR code + download
     ├── <section #dataset>   — reference dataset table (R001–R010)
     └── <script>
-        ├── DatasetModule    — static dataset records + table renderer
+        ├── DatasetModule    — static dataset + table renderer
         ├── UploadModule     — file validation, preview, drag-and-drop
-        ├── AnalyserModule   — Canvas pixel sampling + HSL classification
-        ├── ResultsModule    — result rendering + dataset row highlighting
-        └── NavModule        — hamburger toggle + smooth scroll + active links
+        ├── AnalyserModule   — wound tissue morphology classifier (HSL pixel analysis)
+        ├── ResultsModule    — result rendering + tissue bars + dataset highlighting
+        ├── NavModule        — hamburger toggle + smooth scroll + active links
+        └── QR Generator    — self-contained QR code algorithm
 ```
 
 ---
 
 ## 🧪 Running Tests
 
-1. Open `tests.html` in any modern browser
-2. All property-based and unit tests run automatically on load
-3. A summary at the bottom shows total pass/fail count
+Open `tests.html` in any modern browser — all tests run automatically.
 
-**Tests cover:**
-- Property 1: File size validation boundary (0 → 10MB accepted, >10MB rejected)
-- Property 2: File type validation (all non-image MIME types rejected)
-- Property 3: Colour classification correctness and totality across full HSL space
-- Property 4: Analysis result field completeness and internal consistency
-- Property 5: Dataset record highlighting — correct records per condition
-- Unit tests: `rgbToHsl`, `classifyHsl`, boundary values, `DatasetModule` record counts
+Tests cover file validation, HSL classification, dataset record counts, and property-based correctness properties.
 
 ---
 
@@ -215,8 +261,7 @@ index.html
 | Device | Screen Width | Support |
 |---|---|---|
 | Mobile (small) | 360px+ | ✅ Full support, hamburger nav |
-| Mobile (large) | 414px+ | ✅ Full support |
-| Tablet | 768px+ | ✅ Full support, full nav bar |
+| Tablet | 768px+ | ✅ Full support |
 | Desktop | 1024px+ | ✅ Full support |
 | Large screens | up to 1920px | ✅ Full support |
 
@@ -226,26 +271,13 @@ index.html
 
 ## 🏫 About This Project
 
-HealSense is a **science exhibition / school project demonstration** created to showcase how a low-cost, circuit-free smart wound patch could be monitored using a smartphone. The physical patch model uses:
+HealSense is a **science exhibition / school project** demonstrating how a low-cost, circuit-free smart wound patch can be monitored using a smartphone. The physical patch uses:
 
-- Universal pH indicator paper (pH zone — changes colour based on wound fluid acidity/alkalinity)
+- Universal pH indicator paper (changes colour based on wound fluid pH)
 - Absorbent tissue paper (moisture zone — absorbs blue-tinted simulated wound fluid)
 - Coloured solutions applied by syringe from the side of the patch
-- A QR code linking to this website for real-time status display
 
-The project was originally planned with an Arduino circuit but was updated to a simpler, circuit-free design on the mentor's recommendation — making it more accessible and easier to demonstrate.
-
----
-
-## 📱 QR Code
-
-Scan this QR code on any phone or tablet to open the HealSense website instantly — no typing needed.
-
-[![HealSense QR Code](https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring)](https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring)
-
-**🌐 Live link:** [https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring](https://sohamrp172-sys.github.io/HealSense-Smart-Wound-Monitoring)
-
-> Point your phone camera at the QR code above to open the website directly. Great for demonstrations — print it out or display it on screen next to your physical patch model.
+The digital companion app (this website) analyses real wound photos using Canvas API tissue morphology classification to produce a clinical-style assessment — no Python, no server, no AI library required.
 
 ---
 
@@ -255,12 +287,6 @@ Scan this QR code on any phone or tablet to open the HealSense website instantly
 > It is NOT intended for clinical use, medical diagnosis, or treatment decisions.
 > Do not rely on this system for actual wound care or medical advice.
 > Always consult a qualified healthcare professional for any medical concerns.
-
----
-
-## 📄 Licence
-
-This project is open source and free to use for educational purposes.
 
 ---
 
